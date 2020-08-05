@@ -1,40 +1,30 @@
-﻿using Steamworks;
+#region Using Statements
+
 using System;
 using System.Collections;
+using Steamworks;
 using UnityEngine;
+
+#endregion
 
 namespace Mirror.FizzySteam
 {
     public abstract class Common
     {
-        private EP2PSend[] channels;
-
-        private const int SEND_INTERNAL = 100;
-
-        protected enum InternalMessages : byte
-        {
-            CONNECT,
-            ACCEPT_CONNECT,
-            DISCONNECT
-        }
-
-        private Callback<P2PSessionRequest_t> callback_OnNewConnection = null;
-        private Callback<P2PSessionConnectFail_t> callback_OnConnectFail = null;
-
-        readonly protected byte[] connectMsgBuffer = new byte[] { (byte)InternalMessages.CONNECT };
-        readonly protected byte[] acceptConnectMsgBuffer = new byte[] { (byte)InternalMessages.ACCEPT_CONNECT };
-        readonly protected byte[] disconnectMsgBuffer = new byte[] { (byte)InternalMessages.DISCONNECT };
-        readonly protected byte[] receiveBufferInternal = new byte[1];
-
         protected readonly FizzySteamyMirror transport;
+        private Callback<P2PSessionConnectFail_t> callback_OnConnectFail = null;
+        private Callback<P2PSessionRequest_t> callback_OnNewConnection = null;
+        private EP2PSend[] channels;
+        private int internal_ch => channels.Length;
 
         protected Common(FizzySteamyMirror transport)
         {
-            Debug.Assert(transport.Channels.Length < 100, "FizzySteamyMirror does not support more than 99 channels.");
-            this.channels = transport.Channels;
+            channels = transport.Channels;
 
             callback_OnNewConnection = Callback<P2PSessionRequest_t>.Create(OnNewConnection);
             callback_OnConnectFail = Callback<P2PSessionConnectFail_t>.Create(OnConnectFail);
+
+            this.transport = transport;
         }
 
         protected IEnumerator WaitDisconnect(CSteamID steamID)
@@ -44,6 +34,99 @@ namespace Mirror.FizzySteam
         }
 
         protected void Dispose()
+        {
+            if (callback_OnNewConnection != null)
+            {
+                callback_OnNewConnection.Dispose();
+                callback_OnNewConnection = null;
+            }
+
+            if (callback_OnConnectFail != null)
+            {
+                callback_OnConnectFail.Dispose();
+                callback_OnConnectFail = null;
+            }
+        }
+        protected abstract void OnNewConnection(P2PSessionRequest_t result);
+
+        private void OnConnectFail(P2PSessionConnectFail_t result)
+        {
+            switch (result.m_eP2PSessionError)
+            {
+                case 1:
+                    Debug.LogError(new Exception("Connection failed: The target user is not running the same game."));
+                    break;
+                case 2:
+                    Debug.LogError(
+                        new Exception("Connection failed: The local user doesn't own the app that is running."));
+                    break;
+                case 3:
+                    Debug.LogError(new Exception("Connection failed: Target user isn't connected to Steam."));
+                    break;
+                case 4:
+                    Debug.LogError(new Exception(
+                        "Connection failed: The connection timed out because the target user didn't respond."));
+                    break;
+                default:
+                    Debug.LogError(new Exception("Connection failed: Unknown error."));
+                    break;
+            }
+        }
+
+        protected void SendInternal(CSteamID target, InternalMessages type) =>
+            SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable, internal_ch);
+
+        protected bool Send(CSteamID host, byte[] msgBuffer, int channel) =>
+            SteamNetworking.SendP2PPacket(host, msgBuffer, (uint) msgBuffer.Length, channels[channel], channel);
+
+        private bool Receive(out CSteamID clientSteamID, out byte[] receiveBuffer, int channel)
+        {
+            if (SteamNetworking.IsP2PPacketAvailable(out uint packetSize, channel))
+            {
+                receiveBuffer = new byte[packetSize];
+                return SteamNetworking.ReadP2PPacket(receiveBuffer, packetSize, out _, out clientSteamID, channel);
+            }
+
+            receiveBuffer = null;
+            clientSteamID = CSteamID.Nil;
+            return false;
+        }
+
+        protected void CloseP2PSessionWithUser(CSteamID clientSteamID) =>
+            SteamNetworking.CloseP2PSessionWithUser(clientSteamID);
+
+        public void ReceiveData()
+        {
+            try
+            {
+                while (Receive(out CSteamID clientSteamID, out byte[] internalMessage, internal_ch))
+                    if (internalMessage.Length == 1)
+                        OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamID);
+                    else
+                        Debug.Log("Incorrect package length on internal channel.");
+
+                for (int chNum = 0; chNum < channels.Length; chNum++)
+                    while (Receive(out CSteamID clientSteamID, out byte[] receiveBuffer, chNum))
+                        OnReceiveData(receiveBuffer, clientSteamID, chNum);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        protected abstract void OnReceiveInternalData(InternalMessages type, CSteamID clientSteamID);
+        protected abstract void OnReceiveData(byte[] data, CSteamID clientSteamID, int channel);
+        protected abstract void OnConnectionFailed(CSteamID remoteId);
+
+        protected enum InternalMessages : byte
+        {
+            CONNECT,
+            ACCEPT_CONNECT,
+            DISCONNECT
+        }
+    }
+}
         {
             if (callback_OnNewConnection != null)
             {
