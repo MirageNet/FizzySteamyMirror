@@ -1,16 +1,20 @@
+using UnityEngine;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using UnityEngine;
+using System.Threading.Tasks;
+using OMN.Scripts.Managers;
 
 namespace Mirror.FizzySteam
 {
-    [RequireComponent(typeof(SteamManager))]
     [HelpURL("https://github.com/Chykary/FizzySteamyMirror")]
     public class FizzySteamyMirror : Transport
     {
+#if !MirrorNG
         private const string STEAM_SCHEME = "steam";
+#else
+        public override IEnumerable<string> Scheme => new[] {"steam"};
+#endif
 
         private Client client;
         private Server server;
@@ -18,32 +22,303 @@ namespace Mirror.FizzySteam
         private Common activeNode;
 
         [SerializeField]
-        public EP2PSend[] Channels = new EP2PSend[1] { EP2PSend.k_EP2PSendReliable };
+        public EP2PSend[] Channels = new EP2PSend[2] { EP2PSend.k_EP2PSendReliable, EP2PSend.k_EP2PSendUnreliable };
 
         [Tooltip("Timeout for connecting in seconds.")]
         public int Timeout = 25;
-        [Tooltip("The Steam ID for your application.")]
-        public string SteamAppID = "480";
+
         [Tooltip("Allow or disallow P2P connections to fall back to being relayed through the Steam servers if a direct connection or NAT-traversal cannot be established.")]
         public bool AllowSteamRelay = true;
 
-        [Header("Info")]
-        [Tooltip("This will display your Steam User ID when you start or connect to a server.")]
-        public ulong SteamUserID;
-
         private void Awake()
         {
-            const string fileName = "steam_appid.txt";
-            if (File.Exists(fileName))
+            Debug.Assert(Channels != null && Channels.Length > 0, "No channel configured for FizzySteamMirror.");
+        }
+
+        private void LateUpdate() => activeNode?.ReceiveData();
+
+#if !MirrorNG
+        public override bool ClientConnected() => ClientActive() && client.Connected;
+#else
+        public bool ClientConnected() => ClientActive() && client.Connected;
+#endif
+#if !MirrorNG
+        public override void ClientConnect(string address)
+#else
+        public  async Task<IConnection> ClientConnect(string address)
+#endif
+        {
+            if (!SteamworksManager.Instance.Initialized)
             {
-                string content = File.ReadAllText(fileName);
-                if (content != SteamAppID)
-                {
-                    File.WriteAllText(fileName, SteamAppID.ToString());
-                    Debug.Log($"Updating {fileName}. Previous: {content}, new SteamAppID {SteamAppID}");
-                }
+                Debug.LogError("SteamWorks not initialized. Client could not be started.");
+#if !MirrorNG
+                OnClientDisconnected?.Invoke();
+#else
+                Disconnect();
+#endif
+                return null;
+            }
+
+            if (ServerActive())
+            {
+                Debug.LogError("Transport already running as server!");
+                return null;
+            }
+
+            if (!ClientActive())
+            {
+                Debug.Log($"Starting client, target address {address}.");
+
+                SteamNetworking.AllowP2PPacketRelay(AllowSteamRelay);
+                client = Client.CreateClient(this, address);
+                activeNode = client;
             }
             else
+            {
+                Debug.LogError("Client already running!");
+            }
+
+            return client;
+        }
+
+#if !MirrorNG
+        public override void ClientConnect(Uri uri)
+#else
+        public override async Task<IConnection> ConnectAsync(Uri uri)
+#endif
+        {
+#if !MirrorNG
+            if (uri.Scheme != STEAM_SCHEME)
+                throw new ArgumentException($"Invalid url {uri}, use {STEAM_SCHEME}://SteamID instead", nameof(uri));
+
+            ClientConnect(uri.Host);
+#else
+            //if (uri.Scheme != Scheme.GetEnumerator().Current)
+            //    throw new ArgumentException($"Invalid url {uri}, use {Scheme}://SteamID instead", nameof(uri));
+
+            return await ClientConnect(uri.Host);
+#endif
+        }
+
+#if MirrorNG
+        public override async Task<IConnection> AcceptAsync()
+        {
+            // Steam has no way to do async accepting of connections
+            // so we create a fake loop to keep server running.
+            try
+            {
+                while (ServerActive())
+                {
+                    var t = await QueuedConnectionsAsync();
+                    
+                    if (t != null)
+                        return t;
+
+                    await Task.Delay(1000);
+                }
+
+                return null;
+            }
+            catch (ObjectDisposedException)
+            {
+                // expected,  the connection was closed
+                return null;
+            }
+        }
+
+        private Task<Client> QueuedConnectionsAsync()
+        {
+            if (server._queuedConnections.Count <= 0)  return Task.FromResult<Client>(null);
+
+            var id = server._queuedConnections.Dequeue();
+
+            return Task.FromResult(id == CSteamID.Nil ? null : Client.CreateClient(this, id));
+        }
+#endif
+
+#if !MirrorNG
+        public override bool ClientSend(int channelId, ArraySegment<byte> segment)
+        {
+            clientPoolData = new byte[segment.Count];
+
+            Array.Copy(segment.Array, segment.Offset, clientPoolData, 0, segment.Count);
+            return client.Send(clientPoolData, channelId);
+        }
+
+        public override void ClientDisconnect()
+        {
+            if (ClientActive())
+            {
+                Shutdown();
+            }
+        }
+#endif
+        public bool ClientActive() => client != null;
+
+#if !MirrorNG
+        public override bool ServerActive() => server != null;
+#else
+        public bool ServerActive() => server != null;
+#endif
+#if !MirrorNG
+        public override void ServerStart()
+#else
+        public void ServerStart()
+#endif
+        {
+            if (!SteamworksManager.Instance.Initialized)
+            {
+                Debug.LogError("SteamWorks not initialized. Server could not be started.");
+                return;
+            }
+
+            if (ClientActive())
+            {
+                Debug.LogError("Transport already running as client!");
+                return;
+            }
+
+            if (!ServerActive())
+            {
+                Debug.Log("Starting server.");
+                SteamNetworking.AllowP2PPacketRelay(AllowSteamRelay);
+                server = Server.CreateServer(this, 4);
+                activeNode = server;
+            }
+            else
+            {
+                Debug.LogError("Server already started!");
+            }
+        }
+
+#if !MirrorNG
+        public override Uri ServerUri()
+#else
+        public override IEnumerable<Uri> ServerUri()
+#endif
+        {
+            var steamBuilder = new UriBuilder
+            {
+                Scheme = "steam",
+                Host = SteamUser.GetSteamID().m_SteamID.ToString()
+            };
+
+#if !MirrorNG
+            return steamBuilder.Uri;
+#else
+            return new[] {steamBuilder.Uri};
+#endif
+        }
+
+#if !MirrorNG
+        public override bool ServerSend(List<int> connectionIds, int channelId, ArraySegment<byte> segment)
+        {
+            serverPoolData = new byte[segment.Count];
+
+            Array.Copy(segment.Array, segment.Offset, serverPoolData, 0, segment.Count);
+
+            return ServerActive() && server.SendAll(connectionIds, serverPoolData, channelId);
+        }
+
+        public override bool ServerDisconnect(int connectionId) => ServerActive() && server.Disconnect(connectionId);
+        public override string ServerGetClientAddress(int connectionId) => ServerActive() ? server.ServerGetClientAddress(connectionId) : string.Empty;
+        public override void ServerStop()
+        {
+            if (ServerActive())
+            {
+                Shutdown();
+            }
+        }
+#endif
+
+#if MirrorNG
+        public override Task ListenAsync()
+        {
+            ServerStart();
+
+            return Task.CompletedTask;
+        }
+#endif
+
+#if !MirrorNG
+        public override void Shutdown()
+#else
+        public override void Disconnect()
+#endif
+        {
+            server?.Shutdown();
+            client?.Disconnect();
+
+            server = null;
+            client = null;
+            activeNode = null;
+
+#if UNITY_EDITOR
+            Debug.Log("Transport shut down.");
+#endif
+        }
+
+#if !MirrorNG
+        public override int GetMaxPacketSize(int channelId)
+#else
+        /// <summary>
+        ///     Not used atm.
+        /// </summary>
+        /// <param name="channelId"></param>
+        /// <returns></returns>
+        public int GetMaxPacketSize(int channelId)
+#endif
+        {
+            switch (Channels[channelId])
+            {
+                case EP2PSend.k_EP2PSendUnreliable:
+                case EP2PSend.k_EP2PSendUnreliableNoDelay:
+                    return 1200;
+                case EP2PSend.k_EP2PSendReliable:
+                case EP2PSend.k_EP2PSendReliableWithBuffering:
+                    return 1048576;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+#if !MirrorNG
+        public override bool Available(
+#else
+        public override bool Supported
+#endif
+        {
+#if MirrorNG
+            get
+            {
+#endif
+                try
+                {
+                    return SteamworksManager.Instance.Initialized;
+                }
+                catch
+                {
+                    return false;
+                }
+#if MirrorNG
+            }
+#endif
+        }
+
+        private void OnDestroy()
+        {
+            if (activeNode != null)
+            {
+#if !MirrorNG
+                Shutdown();
+#else
+                Disconnect();
+#endif
+            }
+        }
+    }
+}
+
             {
                 File.WriteAllText(fileName, SteamAppID.ToString());
                 Debug.Log($"New {fileName} written with SteamAppID {SteamAppID}");
