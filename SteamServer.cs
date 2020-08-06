@@ -1,4 +1,4 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.Collections.Generic;
@@ -20,7 +20,6 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         private readonly SteamServerOptions _options;
         internal readonly Queue<CSteamID> _queuedConnections = new Queue<CSteamID>();
         private Callback<P2PSessionRequest_t> _connectionListener = null;
-        
 
         #endregion
 
@@ -51,6 +50,8 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         private void AcceptConnection(P2PSessionRequest_t result)
         {
             SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote);
+
+            Send(result.m_steamIDRemote, InternalMessages.ConnectionAccepted);
 
             if (_queuedConnections.Contains(result.m_steamIDRemote)) return;
 
@@ -107,7 +108,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
                     //    return;
                     //}
 
-                    //SendInternal(clientSteamID, InternalMessages.ACCEPT_CONNECT);
+                    Send(clientSteamID, InternalMessages.ConnectionAccepted);
 
                     //steamToMirrorIds.Add(clientSteamID, connectionId);
 
