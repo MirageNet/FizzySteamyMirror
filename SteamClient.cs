@@ -1,4 +1,4 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.IO;
@@ -85,6 +85,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         private ClientOptions _options;
         private CancellationTokenSource _cancellationToken;
         private event Action OnConnected;
+        private byte[] clientPoolData;
 
         #endregion
 
@@ -100,24 +101,53 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
             return SendAsync(data, 0);
         }
 
-        public Task<bool> ReceiveAsync(MemoryStream buffer)
+        public async Task<bool> ReceiveAsync(MemoryStream buffer)
         {
-            throw new NotImplementedException();
+            //if (_receivedMessages.IsEmpty) return false;
+
+            //_receivedMessages.TryDequeue(out buffer);
+
+#if UNITY_EDITOR
+            Debug.Log($"Client Receiving Data: {buffer}");
+#endif
+
+            return true;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void Disconnect()
         {
-            throw new NotImplementedException();
+            Disconnect();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public EndPoint GetEndPointAddress()
         {
-            throw new NotImplementedException();
+            return new IPEndPoint(IPAddress.None, 0);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="channel"></param>
+        /// <returns></returns>
         public Task SendAsync(ArraySegment<byte> data, int channel)
         {
-            throw new NotImplementedException();
+            Debug.Log($"Client Sending Data: {data.Array}");
+
+            clientPoolData = new byte[data.Count];
+
+            Array.Copy(data.Array, data.Offset, clientPoolData, 0, data.Count);
+
+            Send(_options.ConnectionAddress, clientPoolData, channel);
+
+            return Task.CompletedTask;
         }
 
         #endregion
