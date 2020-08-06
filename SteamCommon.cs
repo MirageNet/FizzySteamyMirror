@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
@@ -51,6 +51,17 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// <param name="type"></param>
         protected void Send(CSteamID target, InternalMessages type) =>
             SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable, 0);
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="host"></param>
+        /// <param name="msgBuffer"></param>
+        /// <param name="channel"></param>
+        /// <returns></returns>
+        protected bool Send(CSteamID host, byte[] msgBuffer, int channel) =>
+            SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, _channels[channel], channel);
 
 
         /// <summary>
