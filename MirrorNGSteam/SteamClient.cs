@@ -1,0 +1,192 @@
+﻿#region Statements
+
+using System;
+using System.IO;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using Mirror;
+using Steamworks;
+using UnityEngine;
+
+#endregion
+
+namespace OMN.Scripts.Networking.MirrorNGSteam
+{
+    public class SteamClient : SteamCommon, IChannelConnection
+    {
+        #region Class Specific
+
+        public SteamClient(ClientOptions options, MirrorNGSteamTransport transport) : base(transport)
+        {
+            _options = options;
+
+            var nc = transport.GetComponent<NetworkClient>();
+
+            OnConnected += () => nc.Connected.Invoke(new NetworkConnection(this));
+        }
+
+        /// <summary>
+        ///     Connect to server.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<IConnection> ConnectAsync()
+        {
+#if UNITY_EDITOR
+            Debug.Log("Starting client.");
+#endif
+            SteamNetworking.AllowP2PPacketRelay(_options.AllowSteamRelay);
+
+            _cancellationToken = new CancellationTokenSource();
+
+            try
+            {
+                var connectedComplete = new TaskCompletionSource<Task>();
+
+                OnConnected += () => connectedComplete.SetResult(connectedComplete.Task);
+
+                SteamNetworking.CloseP2PSessionWithUser(_options.ConnectionAddress);
+
+                Send(_options.ConnectionAddress, InternalMessages.Connect);
+
+                Task connectedCompleteTask = connectedComplete.Task;
+
+                if (await Task.WhenAny(connectedCompleteTask,
+                    Task.Delay(TimeSpan.FromSeconds(Math.Max(1, _options.ConnectionTimeOut)), _cancellationToken.Token)) != connectedCompleteTask)
+                {
+#if UNITY_EDITOR
+                    Debug.LogError($"Connection to {_options.ConnectionAddress.m_SteamID.ToString()} timed out.");
+#endif
+                    return null;
+                }
+
+                return this;
+            }
+            catch (FormatException)
+            {
+#if UNITY_EDITOR
+                Debug.LogError("Connection string was not in the right format. Did you enter a SteamId?");
+#endif
+            }
+            catch (Exception ex)
+            {
+#if UNITY_EDITOR
+                Debug.LogError(ex.Message);
+#endif
+            }
+
+            return null;
+        }
+
+        #endregion
+
+        #region Variables
+
+        private ClientOptions _options;
+        private CancellationTokenSource _cancellationToken;
+        private event Action OnConnected;
+
+        #endregion
+
+        #region Implementation of IConnection
+
+        /// <summary>
+        ///     Send async message using default channel.
+        /// </summary>
+        /// <param name="data">The data we want to send over the wire.</param>
+        /// <returns>Return back the task results.</returns>
+        public Task SendAsync(ArraySegment<byte> data)
+        {
+            return SendAsync(data, 0);
+        }
+
+        public Task<bool> ReceiveAsync(MemoryStream buffer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Disconnect()
+        {
+            throw new NotImplementedException();
+        }
+
+        public EndPoint GetEndPointAddress()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendAsync(ArraySegment<byte> data, int channel)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Overrides of SteamCommon
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="clientSteamID"></param>
+        protected override void OnReceiveInternalData(InternalMessages type, CSteamID clientSteamID)
+        {
+            switch (type)
+            {
+                case InternalMessages.ConnectionAccepted:
+
+                    Connected = true;
+                    OnConnected?.Invoke();
+
+#if UNITY_EDITOR
+                    Debug.Log("Connection established.");
+#endif
+
+                    break;
+                case InternalMessages.Disconnect:
+
+                    Connected = false;
+#if UNITY_EDITOR
+                    Debug.Log("Disconnected.");
+#endif
+                    //OnDisconnected?.Invoke();
+                    break;
+                default:
+                    Debug.Log("Received unknown message type");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="clientSteamID"></param>
+        /// <param name="channel"></param>
+        protected override void OnReceiveData(byte[] data, CSteamID clientSteamID, int channel)
+        {
+            if (clientSteamID != _options.ConnectionAddress)
+            {
+#if UNITY_EDITOR
+                Debug.LogError("Received a message from an unknown");
+#endif
+                return;
+            }
+
+            //_receivedMessages.Enqueue(new MemoryStream(data));
+
+            //OnReceivedData?.Invoke(data, channel);
+        }
+
+        /// <summary>
+        ///    Connection to server has failed to connect.
+        /// </summary>
+        /// <param name="result">The results of why we failed.</param>
+        protected override void ConnectionFailed(P2PSessionConnectFail_t result)
+        {
+            base.ConnectionFailed(result);
+        }
+
+        #endregion
+    }
+}
