@@ -56,6 +56,17 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="host"></param>
+        /// <param name="msgBuffer"></param>
+        /// <param name="channel"></param>
+        /// <returns></returns>
+        protected bool Send(CSteamID host, byte[] msgBuffer, int channel) =>
+            SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, _channels[channel], channel);
+
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <param name="clientSteamID"></param>
         /// <param name="receiveBuffer"></param>
         /// <param name="channel"></param>
