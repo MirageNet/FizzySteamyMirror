@@ -1,4 +1,4 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.Collections.Generic;
@@ -92,7 +92,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
             _server.Disconnect();
         }
 
-        public override Task<IConnection> ConnectAsync(Uri uri)
+        public override async Task<IConnection> ConnectAsync(Uri uri)
         {
             var op = new ClientOptions
             {
@@ -103,7 +103,9 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 
             _client = new SteamClient(op, this);
 
-            return _client.ConnectAsync();
+            await _client.ConnectAsync();
+
+            return _client;
         }
 
         public override async Task<IConnection> AcceptAsync()
