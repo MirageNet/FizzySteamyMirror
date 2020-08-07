@@ -1,4 +1,4 @@
-# FizzySteamyMirror
+# FizzySteamyMirrorNG WIP
 
 This is a community maintained repo forked from **[RayStorm](https://github.com/Raystorms/FizzySteamyMirror)**. 
 
@@ -17,10 +17,7 @@ Both of these projects need to be installed and working before you can use this 
 
 ## Setting Up
 
-1. Install Mirror **(Requires Mirror 8.0+)** from the Unity asset store **[Download Mirror](https://assetstore.unity.com/packages/tools/network/mirror-129321)**.
-2. Install FizzySteamyMirror **[unitypackage](https://github.com/Chykary/FizzySteamyMirror/releases)** from the release section.
-3. In your **"NetworkManager"** object replace **"Telepathy"** script with **"FizzySteamyMirror"** script.
-4. Enter your Steam App ID in the **"FizzySteamyMirror"** script.
+WIP
 
 **Note: The  default 480(Spacewar) appid is a very grey area, technically, it's not allowed but they don't really do anything about it. When you have your own appid from steam then replace the 480 with your own game appid.
 If you know a better way around this please make a [Issue ticket.](https://github.com/Chykary/FizzySteamyMirror/issues)**
