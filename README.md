@@ -7,8 +7,6 @@ Mirror **[docs](https://mirror-networking.com/docs/Transports/Fizzy.html)** and 
 FizzySteamyMirror brings together **[Steam](https://store.steampowered.com)** and **[Mirror](https://github.com/vis2k/Mirror)** utilising Async of a Steam P2P network transport layer for **Mirror**.
 
 ## Dependencies
-**Note: If you already have SteamWorks.Net in your project, you might need to delete either your import or the one included in the FizzySteamyMirrorNG [unitypackage](https://github.com/Chykary/FizzySteamyMirror/releases).**
-
 Both of these projects need to be installed and working before you can use this transport.
 1. **[SteamWorks.NET](https://github.com/rlabrecque/Steamworks.NET)** FizzySteamyMirror relies on Steamworks.NET to communicate with the **[Steamworks API](https://partner.steamgames.com/doc/sdk)**. **Requires .Net 4.x**  
 2. **[MirrorNG](https://github.com/MirrorNG/MirrorNG)** FizzySteamyMirror is also obviously dependant on Mirror which is a streamline, bug fixed, maintained version of UNET for Unity.
