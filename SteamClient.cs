@@ -121,33 +121,31 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 
         #region Implementation of IConnection
 
-        /// <summary>
-        ///     Send async message using default channel.
-        /// </summary>
-        /// <param name="data">The data we want to send over the wire.</param>
-        /// <returns>Return back the task results.</returns>
-        public Task SendAsync(ArraySegment<byte> data)
-        {
-            return SendAsync(data, 0);
-        }
-
         public async Task<bool> ReceiveAsync(MemoryStream buffer)
         {
             try
             {
-#if UNITY_EDITOR
-                Debug.Log($"Client Receiving Data: {buffer}");
-#endif
                 // We have no way to keep connection alive here due to steam backend
                 // so we must create our own small retry system to know when connection finally
                 // has established. This should be fast and no more then connection timeout.
                 // We should be receiving ping pong messages from mirror so if retries fail
                 // and we get pass this then the queue will be empty and should disconnect user.
-                
-                _receivedMessages.TryDequeue(out buffer);
 
-                await Task.Delay(100);
+                var _receiveTask = false;
 
+                while (!_receiveTask)
+                {
+                    var runner = Task.Run(() => _receivedMessages.TryDequeue(out buffer));
+
+                    _receiveTask = await runner.ConfigureAwait(false);
+
+                    await Task.WhenAny(runner);
+                }
+
+#if UNITY_EDITOR
+                string str = BitConverter.ToString(buffer.ToArray());
+                Debug.Log($"Client Receiving Data: {str} ");
+#endif
                 return true;
             }
             catch (ObjectDisposedException)
@@ -177,6 +175,16 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         }
 
         /// <summary>
+        ///     Send async message using default channel.
+        /// </summary>
+        /// <param name="data">The data we want to send over the wire.</param>
+        /// <returns>Return back the task results.</returns>
+        public Task SendAsync(ArraySegment<byte> data)
+        {
+            return SendAsync(data, 2);
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="data"></param>
@@ -184,13 +192,14 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// <returns></returns>
         public Task SendAsync(ArraySegment<byte> data, int channel)
         {
-            Debug.Log($"Client Sending Data: {data.Array}");
-
             _clientPoolData = new byte[data.Count];
 
-            Array.Copy(data.Array, data.Offset, _clientPoolData, 0, data.Count);
+            Array.Copy(data.Array, data.Offset, _clientPoolData, 0, _clientPoolData.Length);
 
             Send(_options.ConnectionAddress, _clientPoolData, channel);
+
+            string str = BitConverter.ToString(_clientPoolData);
+            Debug.Log($"Client Sending Data: {str}");
 
             return Task.CompletedTask;
         }

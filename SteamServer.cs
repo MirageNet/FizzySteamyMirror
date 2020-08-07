@@ -1,9 +1,8 @@
 ﻿#region Statements
 
-using System;
 using System.Collections.Generic;
-using System.IO;
 using Mirror;
+using Mirror.FizzySteam;
 using Steamworks;
 using UnityEngine;
 
