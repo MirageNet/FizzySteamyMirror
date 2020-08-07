@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Steamworks;
@@ -135,17 +136,27 @@ namespace Mirror.FizzySteam
             try
             {
 #if UNITY_EDITOR
-                Debug.Log($"Client Receiving Data: {buffer}");
+                
 #endif
                 // We have no way to keep connection alive here due to steam backend
                 // so we must create our own small retry system to know when connection finally
                 // has established. This should be fast and no more then connection timeout.
                 // We should be receiving ping pong messages from mirror so if retries fail
                 // and we get pass this then the queue will be empty and should disconnect user.
-                
-                _receivedMessages.TryDequeue(out buffer);
 
-                await Task.Delay(100);
+                MemoryStream tempBuffer = new MemoryStream();
+                bool waitingForNewMsg = true;
+                while(waitingForNewMsg)
+                {
+                    if(_receivedMessages.TryDequeue(out tempBuffer))
+                    {
+                        waitingForNewMsg = false;
+                    }
+
+                    await Task.Delay(1);
+                }
+                Debug.Log($"Client Receiving Data: {Encoding.ASCII.GetString(tempBuffer.ToArray())}");
+                buffer = tempBuffer;
 
                 return true;
             }
