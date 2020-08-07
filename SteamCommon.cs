@@ -1,7 +1,11 @@
+﻿#region Statements
+
 using System;
 using System.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
+
+#endregion
 
 namespace OMN.Scripts.Networking.MirrorNGSteam
 {
@@ -18,7 +22,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 
         public bool Connected;
         protected Callback<P2PSessionConnectFail_t> ConnectionFailure = null;
-        private EP2PSend[] _channels;
+        private readonly EP2PSend[] _channels;
 
         protected SteamCommon(MirrorNGSteamTransport transport)
         {
@@ -30,14 +34,17 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         #region Class Specific
 
         /// <summary>
-        /// 
+        ///     Disconnect connection.
+        /// </summary>
+        public abstract void Disconnect();
+
+        /// <summary>
         /// </summary>
         /// <param name="type"></param>
         /// <param name="clientSteamID"></param>
         protected abstract void OnReceiveInternalData(InternalMessages type, CSteamID clientSteamID);
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="data"></param>
         /// <param name="clientSteamID"></param>
@@ -45,27 +52,29 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         protected abstract void OnReceiveData(byte[] data, CSteamID clientSteamID, int channel);
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="target"></param>
         /// <param name="type"></param>
-        protected void Send(CSteamID target, InternalMessages type) =>
-            SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable, 0);
+        protected void Send(CSteamID target, InternalMessages type)
+        {
+            SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable,
+                _channels.Length);
+        }
 
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="host"></param>
         /// <param name="msgBuffer"></param>
         /// <param name="channel"></param>
         /// <returns></returns>
-        protected bool Send(CSteamID host, byte[] msgBuffer, int channel) =>
-            SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, _channels[channel], channel);
+        protected bool Send(CSteamID host, byte[] msgBuffer, int channel)
+        {
+            return SteamNetworking.SendP2PPacket(host, msgBuffer, (uint) msgBuffer.Length, _channels[channel], channel);
+        }
 
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="clientSteamID"></param>
         /// <param name="receiveBuffer"></param>
@@ -73,7 +82,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// <returns></returns>
         private bool Receive(out CSteamID clientSteamID, out byte[] receiveBuffer, int channel)
         {
-            if (SteamNetworking.IsP2PPacketAvailable(out uint packetSize, channel))
+            if (SteamNetworking.IsP2PPacketAvailable(out var packetSize, channel))
             {
                 receiveBuffer = new byte[packetSize];
                 return SteamNetworking.ReadP2PPacket(receiveBuffer, packetSize, out _, out clientSteamID, channel);
@@ -85,20 +94,19 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <returns></returns>
         private async Task ReceiveData()
         {
             try
             {
-                while (Receive(out CSteamID clientSteamID, out byte[] internalMessage, 0))
+                while (Receive(out var clientSteamID, out var internalMessage, _channels.Length))
                     if (internalMessage.Length == 1)
-                        OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamID);
+                        OnReceiveInternalData((InternalMessages) internalMessage[0], clientSteamID);
                     else
                         Debug.Log("Incorrect package length on internal channel.");
 
-                for (int chNum = 0; chNum < _channels.Length; chNum++)
+                for (var chNum = 0; chNum < _channels.Length; chNum++)
                     while (Receive(out var clientSteamID, out var receiveBuffer, chNum))
                         OnReceiveData(receiveBuffer, clientSteamID, chNum);
             }
@@ -108,13 +116,12 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
             }
         }
 
-        public async void Update()
+        public virtual async void Update()
         {
             await ReceiveData();
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="result"></param>
         protected virtual void ConnectionFailed(P2PSessionConnectFail_t result)

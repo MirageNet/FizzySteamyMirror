@@ -1,10 +1,10 @@
-#region Statements
+﻿#region Statements
 
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using Mirror;
-using OMN.Scripts.Managers;
 using Steamworks;
 using UnityEngine;
 
@@ -61,7 +61,10 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
                 ConnectionTimeOut = _clientConnectionTimeout
             };
 
-            return await Task.FromResult(id == CSteamID.Nil ? null : new SteamClient(op, this));
+            var client = new SteamClient(op, this);
+            client.OnClientConnected();
+
+            return await Task.FromResult(id == CSteamID.Nil ? null : client);
         }
 
         #endregion
@@ -88,11 +91,16 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// </summary>
         public override void Disconnect()
         {
-            _client.Disconnect();
-            _server.Disconnect();
+            _client?.Disconnect();
+            _server?.Disconnect();
         }
 
-        public override async Task<IConnection> ConnectAsync(Uri uri)
+        /// <summary>
+        ///     Connect clients async to mirror backend.
+        /// </summary>
+        /// <param name="uri">The address we want to connect to using steam ids.</param>
+        /// <returns></returns>
+        public override Task<IConnection> ConnectAsync(Uri uri)
         {
             var op = new ClientOptions
             {
@@ -103,11 +111,15 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 
             _client = new SteamClient(op, this);
 
-            await _client.ConnectAsync();
-
-            return _client;
+            return _client.ConnectAsync();
         }
 
+        /// <summary>
+        ///     Start listening on the server for client connections.
+        ///     Due to how steam works we must create our own endless loop to fake how sockets
+        ///     would work.
+        /// </summary>
+        /// <returns>Sends back a <see cref="SteamClient"/> connection back to mirror.</returns>
         public override async Task<IConnection> AcceptAsync()
         {
             // Steam has no way to do async accepting of connections
@@ -116,10 +128,20 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
             {
                 while (_server.Connected)
                 {
-                    var t = await QueuedConnectionsAsync();
+                    var client = await QueuedConnectionsAsync();
 
-                    if (t != null)
-                        return t;
+                    if (client != null)
+                    {
+                        // Need to convert the address to to an ip end point so we can parse information from it.
+                        var endPointAddress = client.GetEndPointAddress() as DnsEndPoint;
+
+                        // Now we can parse the actually steam id number from the end point address class.
+                        var steamId = new CSteamID(ulong.Parse(endPointAddress?.Host ?? string.Empty));
+
+                        _server.ClientConnections.Add(steamId, client);
+
+                        return client;
+                    }
 
                     await Task.Delay(100);
                 }

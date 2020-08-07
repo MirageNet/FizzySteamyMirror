@@ -1,5 +1,9 @@
-﻿using System.Collections;
+﻿#region Using Statements
+
+using System.Collections;
 using System.Collections.Generic;
+
+#endregion
 
 namespace Mirror.FizzySteam
 {
@@ -11,7 +15,12 @@ namespace Mirror.FizzySteam
         public IEnumerable<T1> FirstTypes => t1ToT2Dict.Keys;
         public IEnumerable<T2> SecondTypes => t2ToT1Dict.Keys;
 
-        public IEnumerator GetEnumerator() => t1ToT2Dict.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => t1ToT2Dict.GetEnumerator();
+
+        public IEnumerator<KeyValuePair<T1, T2>> GetEnumerator()
+        {
+            return t1ToT2Dict.GetEnumerator();
+        }
 
         public int Count => t1ToT2Dict.Count;
 

@@ -1,10 +1,8 @@
-#region Statements
+﻿#region Statements
 
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
-using System.Threading.Tasks;
 using Mirror;
 using Steamworks;
 using UnityEngine;
@@ -13,13 +11,16 @@ using UnityEngine;
 
 namespace OMN.Scripts.Networking.MirrorNGSteam
 {
-    public class SteamServer : SteamCommon, IChannelConnection
+    public class SteamServer : SteamCommon
     {
         #region Variables
-        
+
         private readonly SteamServerOptions _options;
         internal readonly Queue<CSteamID> _queuedConnections = new Queue<CSteamID>();
-        private Callback<P2PSessionRequest_t> _connectionListener = null;
+        private Callback<P2PSessionRequest_t> _connectionListener;
+
+        protected internal readonly BidirectionalDictionary<CSteamID, SteamClient> ClientConnections =
+            new BidirectionalDictionary<CSteamID, SteamClient>();
 
         #endregion
 
@@ -28,6 +29,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         public SteamServer(SteamServerOptions options, MirrorNGSteamTransport transport) : base(transport)
         {
             _options = options;
+            var t = transport.GetComponent<NetworkServer>();
         }
 
         public void StartListening()
@@ -60,39 +62,31 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 
         #endregion
 
-        #region Implementation of IConnection
-
-        public Task SendAsync(ArraySegment<byte> data)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> ReceiveAsync(MemoryStream buffer)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Disconnect()
-        {
-            throw new NotImplementedException();
-        }
-
-        public EndPoint GetEndPointAddress()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendAsync(ArraySegment<byte> data, int channel)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
         #region Overrides of SteamCommon
 
+        public override void Update()
+        {
+            foreach (var clientConnection in ClientConnections)
+            {
+                var client = clientConnection.Value;
+
+                client?.Update();
+            }
+
+            base.Update();
+        }
+
         /// <summary>
-        /// 
+        ///     Disconnect connection.
+        /// </summary>
+        public override void Disconnect()
+        {
+            _connectionListener.Dispose();
+            _connectionListener = null;
+            _queuedConnections.Clear();
+        }
+
+        /// <summary>
         /// </summary>
         /// <param name="type"></param>
         /// <param name="clientSteamID"></param>
@@ -102,17 +96,18 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
             {
                 case InternalMessages.Connect:
 
-                    //if (steamToMirrorIds.Count >= maxConnections)
-                    //{
-                    //    SendInternal(clientSteamID, InternalMessages.DISCONNECT);
-                    //    return;
-                    //}
+                    if (ClientConnections.Count >= _options.MaxConnections)
+                    {
+                        Send(clientSteamID, InternalMessages.Disconnect);
+
+                        return;
+                    }
+
+                    if (_queuedConnections.Contains(clientSteamID) || ClientConnections.Contains(clientSteamID)) return;
+
+                    _queuedConnections.Enqueue(clientSteamID);
 
                     Send(clientSteamID, InternalMessages.ConnectionAccepted);
-
-                    //steamToMirrorIds.Add(clientSteamID, connectionId);
-
-                    //OnConnected?.Invoke(connectionId);
 
 #if UNITY_EDITOR
                     Debug.Log($"Client with SteamID {clientSteamID} connected.");
@@ -121,11 +116,11 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
                     break;
                 case InternalMessages.Disconnect:
 
-                    //if (steamToMirrorIds.Contains(clientSteamID))
-                    //{
-                        //OnDisconnected?.Invoke(steamToMirrorIds[clientSteamID]);
-                        
-                        //steamToMirrorIds.Remove(clientSteamID);
+                    if (ClientConnections.Contains(clientSteamID))
+                    {
+                        ClientConnections[clientSteamID].Disconnect();
+
+                        ClientConnections.Remove(clientSteamID);
 
                         SteamNetworking.CloseP2PSessionWithUser(clientSteamID);
 
@@ -133,11 +128,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
                         Debug.Log($"Client with SteamID {clientSteamID} disconnected.");
 
 #endif
-                    //}
-                    //else
-                    //{
-                    //OnReceivedError?.Invoke(-1, new Exception("ERROR Unknown SteamID"));
-                    //}
+                    }
 
                     break;
                 default:
@@ -147,24 +138,26 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="data"></param>
         /// <param name="clientSteamID"></param>
         /// <param name="channel"></param>
         protected override void OnReceiveData(byte[] data, CSteamID clientSteamID, int channel)
         {
-            //if (steamToMirrorIds.Contains(clientSteamID))
-            //{
-            //    int connectionId = steamToMirrorIds[clientSteamID];
-            //    OnReceivedData?.Invoke(connectionId, data, channel);
-            //}
-            //else
-            //{
-            //    CloseP2PSessionWithUser(clientSteamID);
-            //    Debug.LogError("Data received from steam client thats not known " + clientSteamID);
-            //    OnReceivedError?.Invoke(-1, new Exception("ERROR Unknown SteamID"));
-            //}
+            if (ClientConnections.Contains(clientSteamID))
+            {
+                var connectionId = ClientConnections[clientSteamID];
+
+                connectionId.OnReceivedData(data, channel);
+            }
+            else
+            {
+                SteamNetworking.CloseP2PSessionWithUser(clientSteamID);
+
+                Debug.LogError("Data received from steam client thats not known " + clientSteamID);
+
+                //OnReceivedError?.Invoke(-1, new Exception("ERROR Unknown SteamID"));
+            }
         }
 
         /// <summary>

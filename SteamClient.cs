@@ -1,6 +1,7 @@
-#region Statements
+﻿#region Statements
 
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Threading;
@@ -24,6 +25,27 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
             var nc = transport.GetComponent<NetworkClient>();
 
             OnConnected += () => nc.Connected.Invoke(new NetworkConnection(this));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="channel"></param>
+        public void OnReceivedData(byte[] data, int channel)
+        {
+            _receivedMessages.Enqueue(new MemoryStream(data));
+
+            OnDataReceived?.Invoke(data, channel);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void OnClientConnected()
+        {
+            Connected = true;
+            OnConnected?.Invoke();
         }
 
         /// <summary>
@@ -57,10 +79,16 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 #if UNITY_EDITOR
                     Debug.LogError($"Connection to {_options.ConnectionAddress.m_SteamID.ToString()} timed out.");
 #endif
+                    OnConnected -= () => connectedComplete.SetResult(connectedComplete.Task);
+
                     return null;
                 }
 
+                OnConnected -= () => connectedComplete.SetResult(connectedComplete.Task);
+
+
                 return this;
+
             }
             catch (FormatException)
             {
@@ -85,7 +113,9 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         private ClientOptions _options;
         private CancellationTokenSource _cancellationToken;
         private event Action OnConnected;
-        private byte[] clientPoolData;
+        public event Action<byte[], int> OnDataReceived;
+        private byte[] _clientPoolData;
+        private readonly ConcurrentQueue<MemoryStream> _receivedMessages = new ConcurrentQueue<MemoryStream>();
 
         #endregion
 
@@ -103,23 +133,38 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 
         public async Task<bool> ReceiveAsync(MemoryStream buffer)
         {
-            //if (_receivedMessages.IsEmpty) return false;
-
-            //_receivedMessages.TryDequeue(out buffer);
-
+            try
+            {
 #if UNITY_EDITOR
-            Debug.Log($"Client Receiving Data: {buffer}");
+                Debug.Log($"Client Receiving Data: {buffer}");
 #endif
+                // We have no way to keep connection alive here due to steam backend
+                // so we must create our own small retry system to know when connection finally
+                // has established. This should be fast and no more then connection timeout.
+                // We should be receiving ping pong messages from mirror so if retries fail
+                // and we get pass this then the queue will be empty and should disconnect user.
+                
+                _receivedMessages.TryDequeue(out buffer);
 
-            return true;
+                await Task.Delay(100);
+
+                return true;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
         }
 
         /// <summary>
         /// 
         /// </summary>
-        public void Disconnect()
+        public override void Disconnect()
         {
-            Disconnect();
+            ConnectionFailure?.Dispose();
+            ConnectionFailure = null;
+
+            _cancellationToken?.Cancel();
         }
 
         /// <summary>
@@ -128,7 +173,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// <returns></returns>
         public EndPoint GetEndPointAddress()
         {
-            return new IPEndPoint(IPAddress.None, 0);
+            return new DnsEndPoint(_options.ConnectionAddress.m_SteamID.ToString(), 0);
         }
 
         /// <summary>
@@ -141,11 +186,11 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         {
             Debug.Log($"Client Sending Data: {data.Array}");
 
-            clientPoolData = new byte[data.Count];
+            _clientPoolData = new byte[data.Count];
 
-            Array.Copy(data.Array, data.Offset, clientPoolData, 0, data.Count);
+            Array.Copy(data.Array, data.Offset, _clientPoolData, 0, data.Count);
 
-            Send(_options.ConnectionAddress, clientPoolData, channel);
+            Send(_options.ConnectionAddress, _clientPoolData, channel);
 
             return Task.CompletedTask;
         }
@@ -203,9 +248,9 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
                 return;
             }
 
-            //_receivedMessages.Enqueue(new MemoryStream(data));
+            _receivedMessages.Enqueue(new MemoryStream(data));
 
-            //OnReceivedData?.Invoke(data, channel);
+             //OnReceivedData?.Invoke(data, channel);
         }
 
         /// <summary>
