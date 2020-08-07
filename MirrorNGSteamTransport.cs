@@ -178,7 +178,7 @@ namespace Mirror.FizzySteam
         /// <summary>
         ///     Does this transport support this specific platform.
         /// </summary>
-        public override bool Supported => SteamworksManager.Instance.Initialized;
+        public override bool Supported => true;//TODO: SteamworksManager.Instance.Initialized;
 
         #endregion
     }
