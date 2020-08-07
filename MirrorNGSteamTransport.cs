@@ -1,16 +1,15 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Mirror;
 using Steamworks;
 using UnityEngine;
 
 #endregion
 
-namespace OMN.Scripts.Networking.MirrorNGSteam
+namespace Mirror.FizzySteam
 {
     public class MirrorNGSteamTransport : Transport
     {

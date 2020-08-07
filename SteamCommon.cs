@@ -1,4 +1,4 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.Threading.Tasks;
@@ -7,7 +7,7 @@ using UnityEngine;
 
 #endregion
 
-namespace OMN.Scripts.Networking.MirrorNGSteam
+namespace Mirror.FizzySteam
 {
     public enum InternalMessages : byte
     {

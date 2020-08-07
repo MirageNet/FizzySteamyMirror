@@ -1,10 +1,10 @@
-﻿#region Statements
+#region Statements
 
 using Steamworks;
 
 #endregion
 
-namespace OMN.Scripts.Networking.MirrorNGSteam
+namespace Mirror.FizzySteam
 {
     public struct ClientOptions
     {

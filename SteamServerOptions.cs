@@ -1,6 +1,6 @@
-﻿using Steamworks;
+using Steamworks;
 
-namespace OMN.Scripts.Networking.MirrorNGSteam
+namespace Mirror.FizzySteam
 {
     public struct SteamServerOptions
     {
