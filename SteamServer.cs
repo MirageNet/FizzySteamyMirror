@@ -32,7 +32,7 @@ namespace Mirror.FizzySteam
         public void StartListening()
         {
 #if UNITY_EDITOR
-            Debug.Log("Starting server.");
+            Debug.Log("Starting Steam server.");
 #endif
             SteamNetworking.AllowP2PPacketRelay(_options.AllowSteamRelay);
 
