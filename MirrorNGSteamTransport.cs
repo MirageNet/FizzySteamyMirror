@@ -26,8 +26,9 @@ namespace Mirror.FizzySteam
         private int _clientConnectionTimeout = 30;
 
         private SteamServer _server;
+        SteamServerOptions serverOptions;
         private SteamClient _client;
-
+        ClientOptions clientOptions;
         #endregion
 
         #region Unity Methods
@@ -109,6 +110,7 @@ namespace Mirror.FizzySteam
             };
 
             _client = new SteamClient(op, this);
+            //TODO: SteamConnection connection = new SteamConnection(op, _client);
 
             return _client.ConnectAsync();
         }
@@ -128,6 +130,7 @@ namespace Mirror.FizzySteam
                 while (_server.Connected)
                 {
                     var client = await QueuedConnectionsAsync();
+                    //TODO: SteamConnection connection = new SteamConnection(serverOptions, _server);
 
                     if (client != null)
                     {
