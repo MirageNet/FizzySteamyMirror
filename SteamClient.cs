@@ -135,9 +135,6 @@ namespace Mirror.FizzySteam
         {
             try
             {
-#if UNITY_EDITOR
-                
-#endif
                 // We have no way to keep connection alive here due to steam backend
                 // so we must create our own small retry system to know when connection finally
                 // has established. This should be fast and no more then connection timeout.
@@ -155,8 +152,6 @@ namespace Mirror.FizzySteam
 
                     await Task.Delay(1);
                 }
-                string str = BitConverter.ToString(tempBuffer.ToArray());
-                Debug.Log($"Client Receiving Data: {str} ");
                 buffer.Write(tempBuffer.ToArray(), 0, tempBuffer.ToArray().Length);
 
                 return true;
@@ -195,19 +190,11 @@ namespace Mirror.FizzySteam
         /// <returns></returns>
         public Task SendAsync(ArraySegment<byte> data, int channel)
         {
-            Debug.Log($"Client Sending Data: {data.Array}");
-
             _clientPoolData = new byte[data.Count];
 
             Array.Copy(data.Array, data.Offset, _clientPoolData, 0, _clientPoolData.Length);
 
             Send(_options.ConnectionAddress, _clientPoolData, channel);
-
-            string str = BitConverter.ToString(_clientPoolData);
-            Debug.Log($"Client Sending Data: {str}");
-
-            string str2 = BitConverter.ToString(data.Array);
-            Debug.Log($"Client Param Data: {str2}");
 
             return Task.CompletedTask;
         }
