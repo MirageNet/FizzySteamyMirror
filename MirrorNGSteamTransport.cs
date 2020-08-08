@@ -2,15 +2,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
-using Mirror;
 using Steamworks;
 using UnityEngine;
 
 #endregion
 
-namespace OMN.Scripts.Networking.MirrorNGSteam
+namespace Mirror.FizzySteam
 {
     public class MirrorNGSteamTransport : Transport
     {
@@ -27,17 +25,7 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         private int _clientConnectionTimeout = 30;
 
         private SteamServer _server;
-        private SteamClient _client;
-
-        #endregion
-
-        #region Unity Methods
-
-        private void Update()
-        {
-            _server?.Update();
-            _client?.Update();
-        }
+        private SteamConnection _client;
 
         #endregion
 
@@ -48,21 +36,31 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         ///     uses events to trigger connections versus a real listening connection.
         /// </summary>
         /// <returns></returns>
-        private async Task<SteamClient> QueuedConnectionsAsync()
+        private async Task<SteamConnection> QueuedConnectionsAsync()
         {
-            if (_server._queuedConnections.Count <= 0) return await Task.FromResult<SteamClient>(null);
+            _server.DataReceivedCheck(out var steamId, out var buffer, Channels.Length);
+
+            if (buffer != null && buffer.Length == 1 && (InternalMessages) buffer[0] == InternalMessages.Connect &&
+                !_server._queuedConnections.Contains(steamId))
+            {
+                _server._queuedConnections.Enqueue(steamId);
+                SteamNetworking.AcceptP2PSessionWithUser(steamId);
+            }
+
+            if (_server._queuedConnections.Count <= 0) return await Task.FromResult<SteamConnection>(null);
 
             var id = _server._queuedConnections.Dequeue();
 
-            var op = new ClientOptions
+            var op = new SteamOptions
             {
                 AllowSteamRelay = _allowSteamRelay,
                 ConnectionAddress = id,
-                ConnectionTimeOut = _clientConnectionTimeout
+                ConnectionTimeOut = _clientConnectionTimeout,
+                Channels = Channels
             };
 
-            var client = new SteamClient(op, this);
-            client.OnClientConnected();
+            var client = new SteamConnection(op, this);
+            _server.SteamSend(id, InternalMessages.Accepted);
 
             return await Task.FromResult(id == CSteamID.Nil ? null : client);
         }
@@ -77,7 +75,12 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// <returns></returns>
         public override Task ListenAsync()
         {
-            var op = new SteamServerOptions {AllowSteamRelay = _allowSteamRelay, MaxConnections = _maxP2PConnections};
+            var op = new SteamOptions
+            {
+                AllowSteamRelay = _allowSteamRelay, 
+                MaxConnections = _maxP2PConnections, 
+                Channels = Channels
+            };
 
             _server = new SteamServer(op, this);
 
@@ -92,7 +95,10 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         public override void Disconnect()
         {
             _client?.Disconnect();
+            _client = null;
+
             _server?.Disconnect();
+            _server = null;
         }
 
         /// <summary>
@@ -102,14 +108,15 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
         /// <returns></returns>
         public override Task<IConnection> ConnectAsync(Uri uri)
         {
-            var op = new ClientOptions
+            var op = new SteamOptions
             {
                 AllowSteamRelay = _allowSteamRelay,
                 ConnectionAddress = new CSteamID(ulong.Parse(uri.Host)),
                 ConnectionTimeOut = _clientConnectionTimeout,
+                Channels = Channels
             };
 
-            _client = new SteamClient(op, this);
+            _client = new SteamConnection(op, this);
 
             return _client.ConnectAsync();
         }
@@ -132,14 +139,6 @@ namespace OMN.Scripts.Networking.MirrorNGSteam
 
                     if (client != null)
                     {
-                        // Need to convert the address to to an ip end point so we can parse information from it.
-                        var endPointAddress = client.GetEndPointAddress() as DnsEndPoint;
-
-                        // Now we can parse the actually steam id number from the end point address class.
-                        var steamId = new CSteamID(ulong.Parse(endPointAddress?.Host ?? string.Empty));
-
-                        _server.ClientConnections.Add(steamId, client);
-
                         return client;
                     }
 
