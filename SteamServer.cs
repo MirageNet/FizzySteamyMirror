@@ -1,6 +1,9 @@
 #region Statements
 
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -134,6 +137,16 @@ namespace Mirror.FizzySteam
             }
         }
 
+        public async Task<bool> ReceiveAsync(MemoryStream buffer)
+        {
+            return true;
+        }
+
+        public Task SendAsync(ArraySegment<byte> data)
+        {
+            return null;//TODO SendAsync(data, 0);
+        }
+
         /// <summary>
         /// </summary>
         /// <param name="data"></param>
@@ -145,7 +158,7 @@ namespace Mirror.FizzySteam
             {
                 var connectionId = ClientConnections[clientSteamID];
 
-                connectionId.OnReceivedData(data, channel);
+                //connectionId.OnReceivedData(data, channel);
             }
             else
             {
