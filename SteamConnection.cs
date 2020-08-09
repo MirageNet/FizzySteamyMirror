@@ -24,7 +24,6 @@ namespace Mirror.FizzySteam
 
         private SteamOptions _options;
         private byte[] _clientSendPoolData, _clientReceivePoolData;
-        protected Callback<P2PSessionConnectFail_t> ConnectionFailure = null;
         private CancellationTokenSource _cancellationToken;
         private event Action OnConnected;
         public bool Connected = false;
@@ -100,31 +99,15 @@ namespace Mirror.FizzySteam
         ///     A connection attempt has failed to connect to us.
         /// </summary>
         /// <param name="result">The results of why the client failed to connect.</param>
-        private void ConnectionFailed(P2PSessionConnectFail_t result)
+        protected override void ConnectionFailed(P2PSessionConnectFail_t result)
         {
-            //TODO Add messages back to clients in ui.
-#if UNITY_EDITOR
-            switch (result.m_eP2PSessionError)
-            {
-                case 1:
-                    Debug.LogError(new Exception("Connection failed: The target user is not running the same game."));
-                    break;
-                case 2:
-                    Debug.LogError(
-                        new Exception("Connection failed: The local user doesn't own the app that is running."));
-                    break;
-                case 3:
-                    Debug.LogError(new Exception("Connection failed: Target user isn't connected to Steam."));
-                    break;
-                case 4:
-                    Debug.LogError(new Exception(
-                        "Connection failed: The connection timed out because the target user didn't respond."));
-                    break;
-                default:
-                    Debug.LogError(new Exception("Connection failed: Unknown error."));
-                    break;
-            }
-#endif
+        }
+
+        protected override void AcceptConnection(P2PSessionRequest_t result)
+        {
+            if(result.m_steamIDRemote != _options.ConnectionAddress) return;
+
+            SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote);
         }
 
         /// <summary>
@@ -144,7 +127,7 @@ namespace Mirror.FizzySteam
         /// <param name="msgBuffer"></param>
         /// <param name="channel"></param>
         /// <returns></returns>
-        protected bool Send(CSteamID host, byte[] msgBuffer, int channel)
+        private bool Send(CSteamID host, byte[] msgBuffer, int channel)
         {
             return SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, _options.Channels[channel], channel);
         }
@@ -152,7 +135,6 @@ namespace Mirror.FizzySteam
         public SteamConnection(SteamOptions options, Transport transport)
         {
             _options = options;
-            ConnectionFailure = Callback<P2PSessionConnectFail_t>.Create(ConnectionFailed);
             SteamNetworking.AllowP2PPacketRelay(_options.AllowSteamRelay);
         }
 
@@ -184,6 +166,9 @@ namespace Mirror.FizzySteam
 
                 while (waitingForNewMsg)
                 {
+                    if (!Connected)
+                        return false;
+
                     for (var channel = 0; channel < _options.Channels.Length; channel++)
                         if(DataReceivedCheck(out var steamUserId, out _clientReceivePoolData, channel))
                         {
@@ -194,7 +179,9 @@ namespace Mirror.FizzySteam
                     await Task.Delay(10);
                 }
 
-                buffer.Write(_clientReceivePoolData, 0, _clientReceivePoolData.Length);
+                buffer.SetLength(0);
+
+                await buffer.WriteAsync(_clientReceivePoolData, 0, _clientReceivePoolData.Length);
 
                 return true;
             }
@@ -204,14 +191,11 @@ namespace Mirror.FizzySteam
             }
         }
 
-        public void Disconnect()
+        public override void Disconnect()
         {
             SteamNetworking.CloseP2PSessionWithUser(_options.ConnectionAddress);
 
-            _cancellationToken.Cancel();
-
-            ConnectionFailure?.Dispose();
-            ConnectionFailure = null;
+            _cancellationToken?.Cancel();
         }
 
         /// <summary>

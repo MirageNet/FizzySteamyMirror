@@ -14,7 +14,6 @@ namespace Mirror.FizzySteam
 
         private readonly SteamOptions _options;
         internal readonly Queue<CSteamID> _queuedConnections = new Queue<CSteamID>();
-        private Callback<P2PSessionRequest_t> _connectionListener;
         public bool Connected = false;
 
         #endregion
@@ -29,7 +28,6 @@ namespace Mirror.FizzySteam
         public SteamServer(SteamOptions options, MirrorNGSteamTransport transport)
         {
             _options = options;
-            _connectionListener = Callback<P2PSessionRequest_t>.Create(AcceptConnection);
             SteamNetworking.AllowP2PPacketRelay(_options.AllowSteamRelay);
         }
 
@@ -42,25 +40,26 @@ namespace Mirror.FizzySteam
         }
 
         /// <summary>
+        ///     Connection request has failed to connect to user.
+        /// </summary>
+        /// <param name="result">The information back from steam.</param>
+        protected override void ConnectionFailed(P2PSessionConnectFail_t result)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <summary>
         ///     Accept new incoming connections.
         /// </summary>
         /// <param name="result">The connection information.</param>
-        private void AcceptConnection(P2PSessionRequest_t result)
-        {
+        protected override void AcceptConnection(P2PSessionRequest_t result) =>
             SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote);
-
-            if (_queuedConnections.Contains(result.m_steamIDRemote)) return;
-
-            _queuedConnections.Enqueue(result.m_steamIDRemote);
-        }
 
         /// <summary>
         ///     Disconnect connection.
         /// </summary>
-        public void Disconnect()
+        public override void Disconnect()
         {
-            _connectionListener?.Dispose();
-            _connectionListener = null;
             _queuedConnections.Clear();
         }
 

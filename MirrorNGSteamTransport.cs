@@ -44,7 +44,7 @@ namespace Mirror.FizzySteam
                 !_server._queuedConnections.Contains(steamId))
             {
                 _server._queuedConnections.Enqueue(steamId);
-                SteamNetworking.AcceptP2PSessionWithUser(steamId);
+                //SteamNetworking.AcceptP2PSessionWithUser(steamId);
             }
 
             if (_server._queuedConnections.Count <= 0) return await Task.FromResult<SteamConnection>(null);
@@ -59,7 +59,7 @@ namespace Mirror.FizzySteam
                 Channels = Channels
             };
 
-            var client = new SteamConnection(op, this);
+            var client = new SteamConnection(op, this) {Connected = true};
             _server.SteamSend(id, InternalMessages.Accepted);
 
             return await Task.FromResult(id == CSteamID.Nil ? null : client);
