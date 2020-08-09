@@ -95,14 +95,6 @@ namespace Mirror.FizzySteam
             return null;
         }
 
-        /// <summary>
-        ///     A connection attempt has failed to connect to us.
-        /// </summary>
-        /// <param name="result">The results of why the client failed to connect.</param>
-        protected override void ConnectionFailed(P2PSessionConnectFail_t result)
-        {
-        }
-
         protected override void AcceptConnection(P2PSessionRequest_t result)
         {
             if(result.m_steamIDRemote != _options.ConnectionAddress) return;

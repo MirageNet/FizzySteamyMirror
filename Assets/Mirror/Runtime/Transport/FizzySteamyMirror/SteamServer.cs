@@ -40,15 +40,6 @@ namespace Mirror.FizzySteam
         }
 
         /// <summary>
-        ///     Connection request has failed to connect to user.
-        /// </summary>
-        /// <param name="result">The information back from steam.</param>
-        protected override void ConnectionFailed(P2PSessionConnectFail_t result)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        /// <summary>
         ///     Accept new incoming connections.
         /// </summary>
         /// <param name="result">The connection information.</param>
