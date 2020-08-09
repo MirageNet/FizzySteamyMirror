@@ -133,7 +133,7 @@ namespace Mirror.FizzySteam
             // so we create a fake loop to keep server running.
             try
             {
-                while (_server.Connected)
+                while (_server?.Connected != null && (bool) _server?.Connected)
                 {
                     var client = await QueuedConnectionsAsync();
 
