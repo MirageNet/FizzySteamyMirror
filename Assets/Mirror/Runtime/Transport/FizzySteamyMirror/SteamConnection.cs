@@ -3,7 +3,6 @@
 using System;
 using System.IO;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
@@ -12,20 +11,15 @@ using UnityEngine;
 
 namespace Mirror.FizzySteam
 {
-    public enum InternalMessages : byte
-    {
-        Connect,
-        Accepted,
-    }
-
     public class SteamConnection : SteamCommon, IChannelConnection
     {
+        static readonly ILogger Logger = LogFactory.GetLogger(typeof(SteamConnection));
+
         #region Variables
 
-        private SteamOptions _options;
-        private byte[] _clientSendPoolData, _clientReceivePoolData;
-        private CancellationTokenSource _cancellationToken;
-        private event Action OnConnected;
+        private byte[] _clientSendPoolData;
+        private Message _clientReceivePoolData;
+        private TaskCompletionSource<Task> _connectedComplete;
         public bool Connected = false;
 
         #endregion
@@ -38,68 +32,66 @@ namespace Mirror.FizzySteam
         /// <returns></returns>
         public async Task<IConnection> ConnectAsync()
         {
-#if UNITY_EDITOR
-            Debug.Log("Starting client.");
-#endif
-            _cancellationToken = new CancellationTokenSource();
+            if (Logger.logEnabled) Logger.Log($"SteamConnection attempting connection to {Options.ConnectionAddress}");
 
-            if(SteamNetworking.GetP2PSessionState(_options.ConnectionAddress, out var connectionState))
+            if(SteamNetworking.GetP2PSessionState(Options.ConnectionAddress, out var connectionState))
                 if (bool.Parse(connectionState.m_bConnectionActive.ToString()))
-                    SteamNetworking.CloseP2PSessionWithUser(_options.ConnectionAddress);
+                    SteamNetworking.CloseP2PSessionWithUser(Options.ConnectionAddress);
 
             try
             {
-                // Send a message to server to intiate handshake connection
-                SteamSend(_options.ConnectionAddress, InternalMessages.Connect);
+                // Send a message to server to initiate handshake connection
+                SteamSend(Options.ConnectionAddress, InternalMessages.Connect);
 
-                var connectedComplete = new TaskCompletionSource<Task>();
-                Task connectedCompleteTask = connectedComplete.Task;
+                _connectedComplete = new TaskCompletionSource<Task>();
+                Task connectedCompleteTask = _connectedComplete.Task;
 
-                while (await Task.WhenAny(connectedCompleteTask, Task.Delay(1000, _cancellationToken.Token)) != connectedCompleteTask)
+                while (await Task.WhenAny(connectedCompleteTask,
+                           Task.Delay(TimeSpan.FromSeconds(Math.Max(1, Options.ConnectionTimeOut)))) !=
+                       connectedCompleteTask)
                 {
-                    if (_options.ConnectionTimeOut < 30)
-                    {
-#if UNITY_EDITOR
-                        Debug.LogError($"Connection to {_options.ConnectionAddress.m_SteamID.ToString()} timed out.");
-#endif
-                        return null;
-                    }
+                    if (Logger.logEnabled)
+                        Logger.LogError(
+                            $"SteamConnection connection to {Options.ConnectionAddress.m_SteamID.ToString()} timed out.");
 
-                    DataReceivedCheck(out var id, out var buffer, _options.Channels.Length);
 
-                    if (buffer == null || buffer.Length != 1 ||
-                        (InternalMessages) buffer[0] != InternalMessages.Accepted) continue;
-
-                    connectedComplete.SetResult(connectedComplete.Task);
-                    _cancellationToken.Cancel();
-                    OnConnected?.Invoke();
-                    Connected = true;
+                    return null;
                 }
-                
-                return this;
 
+                Connected = true;
+
+                return this;
             }
             catch (FormatException)
             {
-#if UNITY_EDITOR
-                Debug.LogError("Connection string was not in the right format. Did you enter a SteamId?");
-#endif
+                if (Logger.logEnabled)
+                    Logger.LogError("SteamConnection connection string was not in the right format. Did you enter a SteamId?");
             }
             catch (Exception ex)
             {
-#if UNITY_EDITOR
-                Debug.LogError(ex.Message);
-#endif
+                if (Logger.logEnabled)
+                    Logger.LogError($"SteamConnection error: {ex.Message}");
             }
 
             return null;
         }
 
-        protected override void AcceptConnection(P2PSessionRequest_t result)
+        /// <summary>
+        ///     Process our internal messages away from mirror.
+        /// </summary>
+        /// <param name="data">The message data coming in.</param>
+        protected void ProcessInternalMessages(Message data)
         {
-            if(result.m_steamIDRemote != _options.ConnectionAddress) return;
-
-            SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote);
+            switch (data.eventType)
+            {
+                case InternalMessages.Accept:
+                    _connectedComplete.SetResult(_connectedComplete.Task);
+                    break;
+                default:
+                    if (Logger.logEnabled)
+                        Logger.Log($"SteamConnection cannot process internal message {data.eventType}");
+                    break;
+            }
         }
 
         /// <summary>
@@ -109,7 +101,35 @@ namespace Mirror.FizzySteam
         internal override bool SteamSend(CSteamID target, InternalMessages type)
         {
             return SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable,
-                _options.Channels.Length);
+                Options.Channels.Length);
+        }
+
+        /// <summary>
+        ///     Update method to be called by the transport.
+        /// </summary>
+        protected internal override void Update()
+        {
+            for (var channel = 0; channel < Options.Channels.Length + 1; channel++)
+            {
+                if (DataAvailable(out var steamId, out var receiveBuffer, channel))
+                {
+                    Message msg;
+
+                    if (receiveBuffer.Length == 1 && (InternalMessages) receiveBuffer[0] != InternalMessages.Data)
+                        msg = new Message(steamId, (InternalMessages) receiveBuffer[0], receiveBuffer);
+                    else
+                    {
+                        msg = new Message(steamId, InternalMessages.Data, receiveBuffer);
+                    }
+
+                    // Checking to see if user is connected otherwise waiting on acceptance message
+                    // so let's process this right away don't need to queue.
+                    if (!Connected && msg.eventType != InternalMessages.Data)
+                        ProcessInternalMessages(msg);
+
+                    QueuedData.Enqueue(msg);
+                }
+            }
         }
 
 
@@ -121,13 +141,13 @@ namespace Mirror.FizzySteam
         /// <returns></returns>
         private bool Send(CSteamID host, byte[] msgBuffer, int channel)
         {
-            return SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, _options.Channels[channel], channel);
+            return SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, Options.Channels[channel], channel);
         }
 
-        public SteamConnection(SteamOptions options, Transport transport)
+        public SteamConnection(SteamOptions options) : base(options)
         {
-            _options = options;
-            SteamNetworking.AllowP2PPacketRelay(_options.AllowSteamRelay);
+            Options = options;
+            SteamNetworking.AllowP2PPacketRelay(Options.AllowSteamRelay);
         }
 
         #endregion
@@ -161,19 +181,21 @@ namespace Mirror.FizzySteam
                     if (!Connected)
                         return false;
 
-                    for (var channel = 0; channel < _options.Channels.Length; channel++)
-                        if(DataReceivedCheck(out var steamUserId, out _clientReceivePoolData, channel))
-                        {
-                            waitingForNewMsg = false;
-                            break;
-                        }
+                    if (QueuedData.TryDequeue(out _clientReceivePoolData))
+                    {
+                        waitingForNewMsg = _clientReceivePoolData.eventType != InternalMessages.Data;
+                    }
 
                     await Task.Delay(10);
                 }
 
                 buffer.SetLength(0);
 
-                await buffer.WriteAsync(_clientReceivePoolData, 0, _clientReceivePoolData.Length);
+                if (Logger.logEnabled)
+                    Logger.Log(
+                        $"SteamConnection processing message: {BitConverter.ToString(_clientReceivePoolData.data)}");
+
+                await buffer.WriteAsync(_clientReceivePoolData.data, 0, _clientReceivePoolData.data.Length);
 
                 return true;
             }
@@ -185,9 +207,16 @@ namespace Mirror.FizzySteam
 
         public override void Disconnect()
         {
-            SteamNetworking.CloseP2PSessionWithUser(_options.ConnectionAddress);
+            if (Logger.logEnabled)
+                Logger.Log($"SteamConnection shutting down.");
 
-            _cancellationToken?.Cancel();
+            SteamSend(Options.ConnectionAddress, InternalMessages.Disconnect);
+
+            _clientSendPoolData = null;
+
+            base.Disconnect();
+
+            SteamNetworking.CloseP2PSessionWithUser(Options.ConnectionAddress);
         }
 
         /// <summary>
@@ -196,7 +225,7 @@ namespace Mirror.FizzySteam
         /// <returns></returns>
         public EndPoint GetEndPointAddress()
         {
-            return new DnsEndPoint(_options.ConnectionAddress.m_SteamID.ToString(), 0);
+            return new DnsEndPoint(Options.ConnectionAddress.m_SteamID.ToString(), 0);
         }
 
         /// <summary>
@@ -211,7 +240,7 @@ namespace Mirror.FizzySteam
 
             Array.Copy(data.Array, data.Offset, _clientSendPoolData, 0, _clientSendPoolData.Length);
 
-            return Send(_options.ConnectionAddress, _clientSendPoolData, channel) ? Task.CompletedTask : null;
+            return Send(Options.ConnectionAddress, _clientSendPoolData, channel) ? Task.CompletedTask : null;
         }
 
         #endregion

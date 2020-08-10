@@ -12,6 +12,8 @@ namespace Mirror.FizzySteam
 {
     public class MirrorNGSteamTransport : Transport
     {
+        static readonly ILogger Logger = LogFactory.GetLogger(typeof(MirrorNGSteamTransport));
+
         #region Variables
 
         [Header("Steam Server Config")] [SerializeField]
@@ -19,6 +21,7 @@ namespace Mirror.FizzySteam
 
         [SerializeField] public EP2PSend[] Channels = new EP2PSend[2]
             {EP2PSend.k_EP2PSendReliable, EP2PSend.k_EP2PSendUnreliable};
+
         [SerializeField] private int _maxP2PConnections = 4;
 
         [Header("Steam Client Config")] [SerializeField]
@@ -29,40 +32,18 @@ namespace Mirror.FizzySteam
 
         #endregion
 
-        #region Class Specific
+        #region Unity Methods
 
-        /// <summary>
-        ///     Steam transport way of scanning for connections as steam itself
-        ///     uses events to trigger connections versus a real listening connection.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<SteamConnection> QueuedConnectionsAsync()
+        private void OnApplicationQuit()
         {
-            _server.DataReceivedCheck(out var steamId, out var buffer, Channels.Length);
+            _server?.Disconnect();
+            _client?.Disconnect();
+        }
 
-            if (buffer != null && buffer.Length == 1 && (InternalMessages) buffer[0] == InternalMessages.Connect &&
-                !_server._queuedConnections.Contains(steamId))
-            {
-                _server._queuedConnections.Enqueue(steamId);
-                //SteamNetworking.AcceptP2PSessionWithUser(steamId);
-            }
-
-            if (_server._queuedConnections.Count <= 0) return await Task.FromResult<SteamConnection>(null);
-
-            var id = _server._queuedConnections.Dequeue();
-
-            var op = new SteamOptions
-            {
-                AllowSteamRelay = _allowSteamRelay,
-                ConnectionAddress = id,
-                ConnectionTimeOut = _clientConnectionTimeout,
-                Channels = Channels
-            };
-
-            var client = new SteamConnection(op, this) {Connected = true};
-            _server.SteamSend(id, InternalMessages.Accepted);
-
-            return await Task.FromResult(id == CSteamID.Nil ? null : client);
+        private void Update()
+        {
+            _server?.Update();
+            _client?.Update();
         }
 
         #endregion
@@ -82,7 +63,7 @@ namespace Mirror.FizzySteam
                 Channels = Channels
             };
 
-            _server = new SteamServer(op, this);
+            _server = new SteamServer(op);
 
             _server.StartListening();
 
@@ -94,6 +75,9 @@ namespace Mirror.FizzySteam
         /// </summary>
         public override void Disconnect()
         {
+            if(Logger.logEnabled)
+                Logger.Log("MirrorNGSteamTransport shutting down.");
+
             _client?.Disconnect();
             _client = null;
 
@@ -116,7 +100,7 @@ namespace Mirror.FizzySteam
                 Channels = Channels
             };
 
-            _client = new SteamConnection(op, this);
+            _client = new SteamConnection(op);
 
             return _client.ConnectAsync();
         }
@@ -133,9 +117,9 @@ namespace Mirror.FizzySteam
             // so we create a fake loop to keep server running.
             try
             {
-                while (_server.Connected)
+                while (_server?.Connected != null && (bool) _server?.Connected)
                 {
-                    var client = await QueuedConnectionsAsync();
+                    var client = await _server.QueuedConnectionsAsync();
 
                     if (client != null)
                     {
