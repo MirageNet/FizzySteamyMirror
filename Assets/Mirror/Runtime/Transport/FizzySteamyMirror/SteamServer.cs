@@ -138,16 +138,18 @@ namespace Mirror.FizzySteam
                 user.Value.Update();
 
             // Look for internal messages only.
-            for (var channel = 0; channel < Options.Channels.Length + 1; channel++)
-                if (DataAvailable(out var steamId, out var receiveBuffer, channel))
-                {
-                    if (receiveBuffer.Length != 1 ||
-                        (InternalMessages) receiveBuffer[0] != InternalMessages.Connect) return;
+            if (!DataAvailable(out var steamId, out var receiveBuffer, Options.Channels.Length)) return;
 
-                    msgBuffer = new Message(steamId, InternalMessages.Connect, receiveBuffer);
+            if (receiveBuffer.Length != 1 ||
+                (InternalMessages) receiveBuffer[0] != InternalMessages.Connect) return;
 
-                    QueuedData.Enqueue(msgBuffer);
-                }
+            msgBuffer = new Message(steamId, InternalMessages.Connect, receiveBuffer);
+
+            if (Logger.logEnabled)
+                Logger.Log(
+                    $"SteamServer: Queue up internal message Event Type: {msgBuffer.eventType} data: {BitConverter.ToString(msgBuffer.data)}");
+
+            QueuedData.Enqueue(msgBuffer);
         }
 
         #endregion

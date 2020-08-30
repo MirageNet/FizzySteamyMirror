@@ -21,6 +21,7 @@ namespace Mirror.FizzySteam
         private Message _clientReceivePoolData;
         private TaskCompletionSource<Task> _connectedComplete;
         public bool Connected = false;
+        public Action ServerFull;
 
         #endregion
 
@@ -52,7 +53,7 @@ namespace Mirror.FizzySteam
                 {
                     if (Logger.logEnabled)
                         Logger.LogError(
-                            $"SteamConnection connection to {Options.ConnectionAddress.m_SteamID.ToString()} timed out.");
+                            $"SteamConnection connection to {Options.ConnectionAddress.m_SteamID} timed out.");
 
 
                     return null;
@@ -80,24 +81,47 @@ namespace Mirror.FizzySteam
         ///     Process our internal messages away from mirror.
         /// </summary>
         /// <param name="data">The message data coming in.</param>
-        protected void ProcessInternalMessages(Message data)
+        private void ProcessInternalMessages(Message data)
         {
             switch (data.eventType)
             {
                 case InternalMessages.Accept:
+
+                    if (Logger.logEnabled)
+                        Logger.Log("Received internal message of server accepted our request to connect.");
+
                     _connectedComplete.SetResult(_connectedComplete.Task);
+
+                    break;
+                case InternalMessages.Disconnect:
+                    if(Logger.logEnabled)
+                        Logger.Log("Received internal message to disconnect steam user.");
+
+                    if (Connected)
+                        Disconnect();
+
+                    break;
+                case InternalMessages.TooManyUsers:
+
+                    if (Logger.logEnabled)
+                        Logger.Log("Received internal message that there are too many users connected to server.");
+
+                    // TODO Implement way to tell users server is full? Or does mirror do this?
+
                     break;
                 default:
                     if (Logger.logEnabled)
-                        Logger.Log($"SteamConnection cannot process internal message {data.eventType}");
+                        Logger.Log(
+                            $"SteamConnection cannot process internal message {data.eventType}. If this is anything other then {InternalMessages.Data} something has gone wrong.");
                     break;
             }
         }
 
         /// <summary>
+        ///     Send an internal message through steam backend. Useful for non mirror data passing.
         /// </summary>
-        /// <param name="target"></param>
-        /// <param name="type"></param>
+        /// <param name="target">The person we want to send data to.</param>
+        /// <param name="type">The type of internal message to send.</param>
         internal override bool SteamSend(CSteamID target, InternalMessages type)
         {
             return SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable,
@@ -109,41 +133,57 @@ namespace Mirror.FizzySteam
         /// </summary>
         protected internal override void Update()
         {
-            for (var channel = 0; channel < Options.Channels.Length + 1; channel++)
+            // Check for internal messages first. Our internal messages are on different channel mirror has
+            // no idea about.
+            if (DataAvailable(out var serverId, out var internalMessage, Options.Channels.Length))
             {
-                if (DataAvailable(out var steamId, out var receiveBuffer, channel))
+                var internalMsg = new Message(serverId, (InternalMessages) internalMessage[0], internalMessage);
+
+                // Checking to see if user is connected otherwise waiting on acceptance message
+                // so let's process this right away don't need to queue.
+                if (internalMsg.eventType != InternalMessages.Data)
                 {
-                    Message msg;
+                    if (Logger.logEnabled)
+                        Logger.Log($"SteamConnection: Processing internal message: {internalMsg.eventType}");
 
-                    if (receiveBuffer.Length == 1 && (InternalMessages) receiveBuffer[0] != InternalMessages.Data)
-                        msg = new Message(steamId, (InternalMessages) receiveBuffer[0], receiveBuffer);
-                    else
-                    {
-                        msg = new Message(steamId, InternalMessages.Data, receiveBuffer);
-                    }
+                    ProcessInternalMessages(internalMsg);
 
-                    // Checking to see if user is connected otherwise waiting on acceptance message
-                    // so let's process this right away don't need to queue.
-                    if (!Connected && msg.eventType != InternalMessages.Data)
-                        ProcessInternalMessages(msg);
-
-                    QueuedData.Enqueue(msg);
+                    return;
                 }
+            }
+            
+            // Check for real data messages coming from mirror channels.
+            for (var channel = 0; channel < Options.Channels.Length; channel++)
+            {
+                if (!DataAvailable(out var steamId, out var receiveBuffer, channel)) continue;
+
+                var dataMsg = new Message(steamId, InternalMessages.Data, receiveBuffer);
+
+                if (Logger.logEnabled)
+                    Logger.Log(
+                        $"SteamConnection: Queue up message Event Type: {dataMsg.eventType} data: {BitConverter.ToString(dataMsg.data)}");
+
+                QueuedData.Enqueue(dataMsg);
             }
         }
 
 
         /// <summary>
+        ///     Send data through steam network.
         /// </summary>
-        /// <param name="host"></param>
-        /// <param name="msgBuffer"></param>
-        /// <param name="channel"></param>
+        /// <param name="host">The person we want to send data to.</param>
+        /// <param name="msgBuffer">The data we are sending.</param>
+        /// <param name="channel">The channel we are going to send data on.</param>
         /// <returns></returns>
         private bool Send(CSteamID host, byte[] msgBuffer, int channel)
         {
             return SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, Options.Channels[channel], channel);
         }
 
+        /// <summary>
+        ///     Initialize <see cref="SteamConnection"/>
+        /// </summary>
+        /// <param name="options"></param>
         public SteamConnection(SteamOptions options) : base(options)
         {
             Options = options;
@@ -205,10 +245,15 @@ namespace Mirror.FizzySteam
             }
         }
 
+        /// <summary>
+        ///     Disconnect steam user and close P2P session.
+        /// </summary>
         public override void Disconnect()
         {
             if (Logger.logEnabled)
                 Logger.Log($"SteamConnection shutting down.");
+
+            Connected = false;
 
             SteamSend(Options.ConnectionAddress, InternalMessages.Disconnect);
 
@@ -238,7 +283,7 @@ namespace Mirror.FizzySteam
         {
             _clientSendPoolData = new byte[data.Count];
 
-            Array.Copy(data.Array, data.Offset, _clientSendPoolData, 0, _clientSendPoolData.Length);
+            Array.Copy(data.Array, data.Offset, _clientSendPoolData, 0, data.Count);
 
             return Send(Options.ConnectionAddress, _clientSendPoolData, channel) ? Task.CompletedTask : null;
         }

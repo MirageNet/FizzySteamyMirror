@@ -126,7 +126,7 @@ namespace Mirror.FizzySteam
                         return client;
                     }
 
-                    await Task.Delay(100);
+                    await Task.Delay(10);
                 }
 
                 return null;
