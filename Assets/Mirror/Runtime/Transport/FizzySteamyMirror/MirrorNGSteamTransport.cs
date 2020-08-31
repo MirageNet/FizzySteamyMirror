@@ -40,7 +40,7 @@ namespace Mirror.FizzySteam
             _client?.Disconnect();
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             _server?.Update();
             _client?.Update();
@@ -126,7 +126,7 @@ namespace Mirror.FizzySteam
                         return client;
                     }
 
-                    await Task.Delay(10);
+                    await Task.Delay(1);
                 }
 
                 return null;

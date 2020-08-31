@@ -13,15 +13,15 @@ namespace Mirror.FizzySteam
 {
     public class SteamConnection : SteamCommon, IChannelConnection
     {
-        static readonly ILogger Logger = LogFactory.GetLogger(typeof(SteamConnection));
+        private static readonly ILogger Logger = LogFactory.GetLogger(typeof(SteamConnection));
 
         #region Variables
 
         private byte[] _clientSendPoolData;
         private Message _clientReceivePoolData;
+        private Message _clientQueuePoolData;
         private TaskCompletionSource<Task> _connectedComplete;
-        public bool Connected = false;
-        public Action ServerFull;
+        public bool Connected;
 
         #endregion
 
@@ -80,10 +80,11 @@ namespace Mirror.FizzySteam
         /// <summary>
         ///     Process our internal messages away from mirror.
         /// </summary>
-        /// <param name="data">The message data coming in.</param>
-        private void ProcessInternalMessages(Message data)
+        /// <param name="type">The <see cref="InternalMessages"/> type message we received.</param>
+        /// <param name="clientSteamId">The client id which the internal message came from.</param>
+        protected override void OnReceiveInternalData(InternalMessages type, CSteamID clientSteamId)
         {
-            switch (data.eventType)
+            switch (type)
             {
                 case InternalMessages.Accept:
 
@@ -112,9 +113,26 @@ namespace Mirror.FizzySteam
                 default:
                     if (Logger.logEnabled)
                         Logger.Log(
-                            $"SteamConnection cannot process internal message {data.eventType}. If this is anything other then {InternalMessages.Data} something has gone wrong.");
+                            $"SteamConnection cannot process internal message {type}. If this is anything other then {InternalMessages.Data} something has gone wrong.");
                     break;
             }
+        }
+
+        /// <summary>
+        ///     Process data incoming from steam backend.
+        /// </summary>
+        /// <param name="data">The data that has come in.</param>
+        /// <param name="clientSteamId">The client the data came from.</param>
+        /// <param name="channel">The channel the data was received on.</param>
+        protected override void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel)
+        {
+            _clientQueuePoolData = new Message(clientSteamId, InternalMessages.Data, data);
+
+            if (Logger.logEnabled)
+                Logger.Log(
+                    $"SteamConnection: Queue up message Event Type: {_clientQueuePoolData.eventType} data: {BitConverter.ToString(_clientQueuePoolData.data)}");
+
+            QueuedData.Enqueue(_clientQueuePoolData);
         }
 
         /// <summary>
@@ -126,45 +144,6 @@ namespace Mirror.FizzySteam
         {
             return SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable,
                 Options.Channels.Length);
-        }
-
-        /// <summary>
-        ///     Update method to be called by the transport.
-        /// </summary>
-        protected internal override void Update()
-        {
-            // Check for internal messages first. Our internal messages are on different channel mirror has
-            // no idea about.
-            if (DataAvailable(out var serverId, out var internalMessage, Options.Channels.Length))
-            {
-                var internalMsg = new Message(serverId, (InternalMessages) internalMessage[0], internalMessage);
-
-                // Checking to see if user is connected otherwise waiting on acceptance message
-                // so let's process this right away don't need to queue.
-                if (internalMsg.eventType != InternalMessages.Data)
-                {
-                    if (Logger.logEnabled)
-                        Logger.Log($"SteamConnection: Processing internal message: {internalMsg.eventType}");
-
-                    ProcessInternalMessages(internalMsg);
-
-                    return;
-                }
-            }
-            
-            // Check for real data messages coming from mirror channels.
-            for (var channel = 0; channel < Options.Channels.Length; channel++)
-            {
-                if (!DataAvailable(out var steamId, out var receiveBuffer, channel)) continue;
-
-                var dataMsg = new Message(steamId, InternalMessages.Data, receiveBuffer);
-
-                if (Logger.logEnabled)
-                    Logger.Log(
-                        $"SteamConnection: Queue up message Event Type: {dataMsg.eventType} data: {BitConverter.ToString(dataMsg.data)}");
-
-                QueuedData.Enqueue(dataMsg);
-            }
         }
 
 
@@ -214,20 +193,15 @@ namespace Mirror.FizzySteam
         {
             try
             {
-                bool waitingForNewMsg = true;
+                if (!Connected)
+                    return false;
 
-                while (waitingForNewMsg)
+                while (QueuedData.Count <= 0)
                 {
-                    if (!Connected)
-                        return false;
-
-                    if (QueuedData.TryDequeue(out _clientReceivePoolData))
-                    {
-                        waitingForNewMsg = _clientReceivePoolData.eventType != InternalMessages.Data;
-                    }
-
-                    await Task.Delay(10);
+                    await Task.Delay(1);
                 }
+
+                QueuedData.TryDequeue(out _clientReceivePoolData);
 
                 buffer.SetLength(0);
 
@@ -251,11 +225,9 @@ namespace Mirror.FizzySteam
         public override void Disconnect()
         {
             if (Logger.logEnabled)
-                Logger.Log($"SteamConnection shutting down.");
+                Logger.Log("SteamConnection shutting down.");
 
             Connected = false;
-
-            SteamSend(Options.ConnectionAddress, InternalMessages.Disconnect);
 
             _clientSendPoolData = null;
 

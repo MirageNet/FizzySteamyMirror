@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -15,7 +17,7 @@ namespace Mirror.FizzySteam
 
         private static readonly ILogger Logger = LogFactory.GetLogger(typeof(SteamCommon));
 
-        private Callback<P2PSessionConnectFail_t> _connectionFailure = null;
+        private Callback<P2PSessionConnectFail_t> _connectionFailure;
         internal readonly ConcurrentQueue<Message> QueuedData = new ConcurrentQueue<Message>();
         protected SteamOptions Options;
 
@@ -78,34 +80,67 @@ namespace Mirror.FizzySteam
         internal abstract bool SteamSend(CSteamID target, InternalMessages type);
 
         /// <summary>
+        ///     Process our internal messages away from mirror.
+        /// </summary>
+        /// <param name="type">The <see cref="InternalMessages"/> type message we received.</param>
+        /// <param name="clientSteamId">The client id which the internal message came from.</param>
+        protected abstract void OnReceiveInternalData(InternalMessages type, CSteamID clientSteamId);
+
+        /// <summary>
+        ///     Process data incoming from steam backend.
+        /// </summary>
+        /// <param name="data">The data that has come in.</param>
+        /// <param name="clientSteamId">The client the data came from.</param>
+        /// <param name="channel">The channel the data was received on.</param>
+        protected abstract void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel);
+
+        /// <summary>
         ///     Update method to be called by the transport.
         /// </summary>
-        protected internal abstract void Update();
+        protected internal void Update()
+        {
+            while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
+            {
+                if (internalMessage.Length != 1) continue;
+
+                OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamId);
+
+                return;
+            }
+
+            for (int chNum = 0; chNum < Options.Channels.Length; chNum++)
+            {
+                while (DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, chNum))
+                {
+                    OnReceiveData(receiveBuffer, clientSteamId, chNum);
+                }
+            }
+        }
 
         /// <summary>
         ///     Check to see if we have received any data from steam users.
         /// </summary>
-        /// <param name="clientSteamID">Returns back the steam id of users who sent message.</param>
+        /// <param name="clientSteamId">Returns back the steam id of users who sent message.</param>
         /// <param name="receiveBuffer">The data that was sent to use.</param>
         /// <param name="channel">The channel the data was sent on.</param>
         /// <returns></returns>
-        protected bool DataAvailable(out CSteamID clientSteamID, out byte[] receiveBuffer, int channel)
+        private bool DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, int channel)
         {
             if (!SteamworksManager.Instance.Initialized)
             {
                 receiveBuffer = null;
-                clientSteamID = CSteamID.Nil;
+                clientSteamId = CSteamID.Nil;
                 return false;
             }
 
             if (SteamNetworking.IsP2PPacketAvailable(out var packetSize, channel))
             {
                 receiveBuffer = new byte[packetSize];
-                return SteamNetworking.ReadP2PPacket(receiveBuffer, packetSize, out _, out clientSteamID, channel);
+                return SteamNetworking.ReadP2PPacket(receiveBuffer, packetSize, out _, out clientSteamId, channel);
             }
 
             receiveBuffer = null;
-            clientSteamID = CSteamID.Nil;
+            clientSteamId = CSteamID.Nil;
             return false;
         }
 
