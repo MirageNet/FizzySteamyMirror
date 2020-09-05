@@ -30,6 +30,8 @@ namespace Mirror.FizzySteam
         private SteamServer _server;
         private SteamConnection _client;
 
+        public Action<ErrorCodes, string> Error;
+
         #endregion
 
         #region Unity Methods
@@ -101,6 +103,8 @@ namespace Mirror.FizzySteam
             };
 
             _client = new SteamConnection(op);
+
+            _client.Error += (errorCode, message) => Error.Invoke(errorCode, message);
 
             return _client.ConnectAsync();
         }

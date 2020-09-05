@@ -2,8 +2,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -20,6 +18,7 @@ namespace Mirror.FizzySteam
         private Callback<P2PSessionConnectFail_t> _connectionFailure;
         internal readonly ConcurrentQueue<Message> QueuedData = new ConcurrentQueue<Message>();
         protected SteamOptions Options;
+        public Action<ErrorCodes, string> Error;
 
         #endregion
 
@@ -43,31 +42,55 @@ namespace Mirror.FizzySteam
         /// <param name="result">The information back from steam.</param>
         protected virtual void OnConnectionFailed(P2PSessionConnectFail_t result)
         {
-            //TODO Add messages back to clients in ui.
+            string errorMessage;
 
             switch (result.m_eP2PSessionError)
             {
                 case 1:
+
+                    errorMessage = "Connection failed: The target user is not running the same game.";
+
+                    Error.Invoke((ErrorCodes) result.m_eP2PSessionError, errorMessage);
+
                     if (Logger.logEnabled)
-                        Logger.LogError(new Exception("SteamCommon connection failed: The target user is not running the same game."));
+                        Logger.LogError(new Exception(errorMessage));
                     break;
                 case 2:
+
+                    errorMessage = "Connection failed: The local user doesn't own the app that is running.";
+
+                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+
                     if (Logger.logEnabled)
                         Logger.LogError(
-                        new Exception("SteamCommon connection failed: The local user doesn't own the app that is running."));
+                        new Exception(errorMessage));
                     break;
                 case 3:
+
+                    errorMessage = "Connection failed: The target user is not running the same game.";
+
+                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+
                     if (Logger.logEnabled)
-                        Logger.LogError(new Exception("SteamCommon connection failed: Target user isn't connected to Steam."));
+                        Logger.LogError(new Exception(errorMessage));
                     break;
                 case 4:
+
+                    errorMessage = "Connection failed: The connection timed out because the target user didn't respond.";
+
+                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+
                     if (Logger.logEnabled)
-                        Logger.LogError(new Exception(
-                        "SteamCommon connection failed: The connection timed out because the target user didn't respond."));
+                        Logger.LogError(new Exception(errorMessage));
                     break;
                 default:
+
+                    errorMessage = $"Connection failed: Unknown: {(EP2PSessionError) result.m_eP2PSessionError}";
+
+                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+
                     if (Logger.logEnabled)
-                        Logger.LogError(new Exception("SteamCommon connection failed: Unknown error."));
+                        Logger.LogError(new Exception(errorMessage));
                     break;
             }
         }
