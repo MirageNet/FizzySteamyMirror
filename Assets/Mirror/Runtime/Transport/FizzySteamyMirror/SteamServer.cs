@@ -17,7 +17,6 @@ namespace Mirror.FizzySteam
 
         #region Variables
 
-        public bool Connected;
         private readonly IDictionary<CSteamID, SteamConnection> _connectedSteamUsers;
         private readonly ConcurrentQueue<Message> _connectionQueue = new ConcurrentQueue<Message>();
         private Callback<P2PSessionRequest_t> _connectionRequest;
@@ -86,7 +85,7 @@ namespace Mirror.FizzySteam
 
             Options.ConnectionAddress = _msgBuffer.steamId;
 
-            var client = new SteamConnection(Options) {Connected = true};
+            var client = new SteamConnection(Options);
 
             if (Logger.logEnabled)
                 Logger.Log($"SteamServer connecting with {_msgBuffer.steamId} and accepting handshake.");
@@ -102,8 +101,6 @@ namespace Mirror.FizzySteam
         public void StartListening()
         {
             if (Logger.logEnabled) Logger.Log("SteamServer listening for incoming connections....");
-
-            Connected = true;
         }
 
         #endregion

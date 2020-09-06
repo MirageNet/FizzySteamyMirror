@@ -21,7 +21,6 @@ namespace Mirror.FizzySteam
         private Message _clientReceivePoolData;
         private Message _clientQueuePoolData;
         private TaskCompletionSource<Task> _connectedComplete;
-        public bool Connected;
 
         #endregion
 
@@ -59,20 +58,18 @@ namespace Mirror.FizzySteam
                     return null;
                 }
 
-                Connected = true;
-
                 return this;
             }
             catch (FormatException)
             {
-                Error.Invoke(ErrorCodes.IncorrectStringFormat, $"Connection string was not in the correct format.");
+                Error?.Invoke(ErrorCodes.IncorrectStringFormat, $"Connection string was not in the correct format.");
 
                 if (Logger.logEnabled)
                     Logger.LogError("SteamConnection connection string was not in the right format. Did you enter a SteamId?");
             }
             catch (Exception ex)
             {
-                Error.Invoke(ErrorCodes.None, $"Error: {ex.Message}");
+                Error?.Invoke(ErrorCodes.None, $"Error: {ex.Message}");
 
                 if (Logger.logEnabled)
                     Logger.LogError($"SteamConnection error: {ex.Message}");
@@ -88,6 +85,8 @@ namespace Mirror.FizzySteam
         /// <param name="clientSteamId">The client id which the internal message came from.</param>
         protected override void OnReceiveInternalData(InternalMessages type, CSteamID clientSteamId)
         {
+            if(!Connected) return;
+
             switch (type)
             {
                 case InternalMessages.Accept:
@@ -99,13 +98,13 @@ namespace Mirror.FizzySteam
 
                     break;
                 case InternalMessages.Disconnect:
-                    if(Logger.logEnabled)
-                        Logger.Log("Received internal message to disconnect steam user.");
 
-                    if (Connected)
                         Disconnect();
 
-                    break;
+                        if (Logger.logEnabled)
+                            Logger.Log("Received internal message to disconnect steam user.");
+
+                        break;
                 case InternalMessages.TooManyUsers:
 
                     if (Logger.logEnabled)
@@ -130,6 +129,8 @@ namespace Mirror.FizzySteam
         /// <param name="channel">The channel the data was received on.</param>
         protected override void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel)
         {
+            if(!Connected) return;
+
             _clientQueuePoolData = new Message(clientSteamId, InternalMessages.Data, data);
 
             if (Logger.logEnabled)
@@ -146,7 +147,8 @@ namespace Mirror.FizzySteam
         /// <param name="type">The type of internal message to send.</param>
         internal override bool SteamSend(CSteamID target, InternalMessages type)
         {
-            return SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable,
+            return SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1,
+                EP2PSend.k_EP2PSendReliable,
                 Options.Channels.Length);
         }
 
@@ -160,7 +162,7 @@ namespace Mirror.FizzySteam
         /// <returns></returns>
         private bool Send(CSteamID host, byte[] msgBuffer, int channel)
         {
-            return SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, Options.Channels[channel], channel);
+            return Connected && SteamNetworking.SendP2PPacket(host, msgBuffer, (uint)msgBuffer.Length, Options.Channels[channel], channel);
         }
 
         /// <summary>
@@ -185,7 +187,7 @@ namespace Mirror.FizzySteam
         public Task SendAsync(ArraySegment<byte> data)
         {
             // Default send to reliable channel;
-            return SendAsync(data, 0);
+            return !Connected ? null : SendAsync(data, 0);
         }
 
         /// <summary>
@@ -197,11 +199,16 @@ namespace Mirror.FizzySteam
         {
             try
             {
-                if (!Connected)
-                    return false;
+                if (!Connected) return false;
 
                 while (QueuedData.Count <= 0)
                 {
+                    // Due to how steam works we have no connection state to be able to
+                    // know when server disconnects us truly. So when steam sends a internal disconnect
+                    // message we disconnect as normal but the _cancellation Token will trigger and we can exit cleanly
+                    // using mirror.
+                    if (!Connected) return false;
+
                     await Task.Delay(1);
                 }
 
@@ -226,14 +233,19 @@ namespace Mirror.FizzySteam
         /// <summary>
         ///     Disconnect steam user and close P2P session.
         /// </summary>
-        public override void Disconnect()
+        public override async void Disconnect()
         {
+            if(!Connected) return;
+
             if (Logger.logEnabled)
                 Logger.Log("SteamConnection shutting down.");
 
-            Connected = false;
-
             _clientSendPoolData = null;
+
+            SteamSend(Options.ConnectionAddress, InternalMessages.Disconnect);
+
+            // Wait 1 seconds to make sure the disconnect message gets fired.
+            await Task.Delay(1000);
 
             base.Disconnect();
 
@@ -257,6 +269,8 @@ namespace Mirror.FizzySteam
         /// <returns></returns>
         public Task SendAsync(ArraySegment<byte> data, int channel)
         {
+            if (!Connected) return null;
+
             _clientSendPoolData = new byte[data.Count];
 
             Array.Copy(data.Array, data.Offset, _clientSendPoolData, 0, data.Count);

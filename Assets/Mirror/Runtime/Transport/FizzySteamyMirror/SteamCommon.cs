@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -15,6 +17,8 @@ namespace Mirror.FizzySteam
 
         private static readonly ILogger Logger = LogFactory.GetLogger(typeof(SteamCommon));
 
+        private Task _pollDataTask = Task.CompletedTask;
+        private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
         private Callback<P2PSessionConnectFail_t> _connectionFailure;
         internal readonly ConcurrentQueue<Message> QueuedData = new ConcurrentQueue<Message>();
         protected SteamOptions Options;
@@ -24,15 +28,19 @@ namespace Mirror.FizzySteam
 
         #region Class Specific
 
+        public bool Connected => _cancellationToken.IsCancellationRequested != true;
+
         protected SteamCommon(SteamOptions options)
         {
             Options = options;
             _connectionFailure = Callback<P2PSessionConnectFail_t>.Create(OnConnectionFailed);
+            _pollDataTask = Task.Run(Update);
         }
 
         public virtual void Disconnect()
         {
-            _connectionFailure.Dispose();
+            _cancellationToken?.Cancel();
+            _connectionFailure?.Dispose();
             _connectionFailure = null;
         }
 
@@ -50,7 +58,7 @@ namespace Mirror.FizzySteam
 
                     errorMessage = "Connection failed: The target user is not running the same game.";
 
-                    Error.Invoke((ErrorCodes) result.m_eP2PSessionError, errorMessage);
+                    Error?.Invoke((ErrorCodes) result.m_eP2PSessionError, errorMessage);
 
                     if (Logger.logEnabled)
                         Logger.LogError(new Exception(errorMessage));
@@ -59,7 +67,7 @@ namespace Mirror.FizzySteam
 
                     errorMessage = "Connection failed: The local user doesn't own the app that is running.";
 
-                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+                    Error?.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
 
                     if (Logger.logEnabled)
                         Logger.LogError(
@@ -69,7 +77,7 @@ namespace Mirror.FizzySteam
 
                     errorMessage = "Connection failed: The target user is not running the same game.";
 
-                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+                    Error?.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
 
                     if (Logger.logEnabled)
                         Logger.LogError(new Exception(errorMessage));
@@ -78,7 +86,7 @@ namespace Mirror.FizzySteam
 
                     errorMessage = "Connection failed: The connection timed out because the target user didn't respond.";
 
-                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+                    Error?.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
 
                     if (Logger.logEnabled)
                         Logger.LogError(new Exception(errorMessage));
@@ -87,7 +95,7 @@ namespace Mirror.FizzySteam
 
                     errorMessage = $"Connection failed: Unknown: {(EP2PSessionError) result.m_eP2PSessionError}";
 
-                    Error.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
+                    Error?.Invoke((ErrorCodes)result.m_eP2PSessionError, errorMessage);
 
                     if (Logger.logEnabled)
                         Logger.LogError(new Exception(errorMessage));
@@ -120,22 +128,25 @@ namespace Mirror.FizzySteam
         /// <summary>
         ///     Update method to be called by the transport.
         /// </summary>
-        protected internal void Update()
+        private void Update()
         {
-            while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
+            while (Connected)
             {
-                if (internalMessage.Length != 1) continue;
-
-                OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamId);
-
-                return;
-            }
-
-            for (int chNum = 0; chNum < Options.Channels.Length; chNum++)
-            {
-                while (DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, chNum))
+                while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
                 {
-                    OnReceiveData(receiveBuffer, clientSteamId, chNum);
+                    if (internalMessage.Length != 1) continue;
+
+                    OnReceiveInternalData((InternalMessages) internalMessage[0], clientSteamId);
+
+                    break;
+                }
+
+                for (int chNum = 0; chNum < Options.Channels.Length; chNum++)
+                {
+                    while (DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, chNum))
+                    {
+                        OnReceiveData(receiveBuffer, clientSteamId, chNum);
+                    }
                 }
             }
         }

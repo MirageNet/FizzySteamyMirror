@@ -28,7 +28,6 @@ namespace Mirror.FizzySteam
         private int _clientConnectionTimeout = 30;
 
         private SteamServer _server;
-        private SteamConnection _client;
 
         public Action<ErrorCodes, string> Error;
 
@@ -39,13 +38,6 @@ namespace Mirror.FizzySteam
         private void OnApplicationQuit()
         {
             _server?.Disconnect();
-            _client?.Disconnect();
-        }
-
-        private void LateUpdate()
-        {
-            _server?.Update();
-            _client?.Update();
         }
 
         #endregion
@@ -80,9 +72,6 @@ namespace Mirror.FizzySteam
             if(Logger.logEnabled)
                 Logger.Log("MirrorNGSteamTransport shutting down.");
 
-            _client?.Disconnect();
-            _client = null;
-
             _server?.Disconnect();
             _server = null;
         }
@@ -102,11 +91,11 @@ namespace Mirror.FizzySteam
                 Channels = Channels
             };
 
-            _client = new SteamConnection(op);
+            var client = new SteamConnection(op);
 
-            _client.Error += (errorCode, message) => Error.Invoke(errorCode, message);
+            client.Error += (errorCode, message) => Error?.Invoke(errorCode, message);
 
-            return _client.ConnectAsync();
+            return client.ConnectAsync();
         }
 
         /// <summary>
