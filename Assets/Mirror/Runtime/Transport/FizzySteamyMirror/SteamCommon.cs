@@ -100,6 +100,8 @@ namespace Mirror.FizzySteam
                         Logger.LogError(new Exception(errorMessage));
                     break;
             }
+
+            _cancellationToken.Cancel();
         }
 
         /// <summary>

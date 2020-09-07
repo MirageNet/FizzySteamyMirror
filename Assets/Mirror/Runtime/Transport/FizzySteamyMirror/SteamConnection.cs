@@ -88,7 +88,7 @@ namespace Mirror.FizzySteam
         {
             base.OnConnectionFailed(result);
 
-            Disconnect();
+            _connectedComplete.SetCanceled();
         }
 
         #endregion
@@ -256,7 +256,6 @@ namespace Mirror.FizzySteam
                 Logger.Log("SteamConnection shutting down.");
 
             _clientSendPoolData = null;
-            _connectedComplete.SetCanceled();
 
             SteamSend(Options.ConnectionAddress, InternalMessages.Disconnect);
 
