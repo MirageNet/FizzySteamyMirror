@@ -121,16 +121,6 @@ namespace Mirror.FizzySteam
         }
 
         /// <summary>
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="type"></param>
-        internal override bool SteamSend(CSteamID target, InternalMessages type)
-        {
-            return SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1, EP2PSend.k_EP2PSendReliable,
-                Options.Channels.Length);
-        }
-
-        /// <summary>
         ///     Process our internal messages away from mirror.
         /// </summary>
         /// <param name="type">The <see cref="InternalMessages"/> type message we received.</param>
@@ -167,6 +157,21 @@ namespace Mirror.FizzySteam
             }
         }
 
+        protected override void ProcessIncomingMessages()
+        {
+            while (Connected)
+            {
+                while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
+                {
+                    if (internalMessage.Length != 1) continue;
+
+                    OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamId);
+
+                    break;
+                }
+            }
+        }
+
         /// <summary>
         ///     Process data incoming from steam backend.
         /// </summary>
@@ -183,8 +188,8 @@ namespace Mirror.FizzySteam
             
             // We need to check if data is from a user and pass it to the correct queue system
             // due to how mirrorng works we cant just event listener it.
-            if (_connectedSteamUsers.ContainsKey(clientSteamId))
-                _connectedSteamUsers[clientSteamId].QueuedData.Enqueue(dataMsg);
+            //if (_connectedSteamUsers.ContainsKey(clientSteamId))
+            //    _connectedSteamUsers[clientSteamId].QueuedData.Enqueue(dataMsg);
         }
 
         #endregion

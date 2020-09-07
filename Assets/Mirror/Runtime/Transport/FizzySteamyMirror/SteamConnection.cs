@@ -54,6 +54,8 @@ namespace Mirror.FizzySteam
                         Logger.LogError(
                             $"SteamConnection connection to {Options.ConnectionAddress.m_SteamID} timed out.");
 
+                    Error.Invoke(ErrorCodes.ConnectionFailed,
+                        "SteamConnection connection to {Options.ConnectionAddress.m_SteamID} timed out.");
 
                     return null;
                 }
@@ -137,6 +139,32 @@ namespace Mirror.FizzySteam
         }
 
         /// <summary>
+        ///     Process incoming messages.
+        /// </summary>
+        protected override void ProcessIncomingMessages()
+        {
+            while (Connected)
+            {
+                while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
+                {
+                    if (internalMessage.Length != 1) continue;
+
+                    OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamId);
+
+                    break;
+                }
+
+                for (int chNum = 0; chNum < Options.Channels.Length; chNum++)
+                {
+                    while (DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, chNum))
+                    {
+                        OnReceiveData(receiveBuffer, clientSteamId, chNum);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         ///     Process data incoming from steam backend.
         /// </summary>
         /// <param name="data">The data that has come in.</param>
@@ -154,19 +182,6 @@ namespace Mirror.FizzySteam
 
             QueuedData.Enqueue(_clientQueuePoolData);
         }
-
-        /// <summary>
-        ///     Send an internal message through steam backend. Useful for non mirror data passing.
-        /// </summary>
-        /// <param name="target">The person we want to send data to.</param>
-        /// <param name="type">The type of internal message to send.</param>
-        internal override bool SteamSend(CSteamID target, InternalMessages type)
-        {
-            return SteamNetworking.SendP2PPacket(target, new[] {(byte) type}, 1,
-                EP2PSend.k_EP2PSendReliable,
-                Options.Channels.Length);
-        }
-
 
         /// <summary>
         ///     Send data through steam network.

@@ -33,7 +33,7 @@ namespace Mirror.FizzySteam
         {
             Options = options;
             _connectionFailure = Callback<P2PSessionConnectFail_t>.Create(OnConnectionFailed);
-            _= Task.Run(Update);
+            _ = Task.Run(ProcessIncomingMessages);
         }
 
         public virtual void Disconnect()
@@ -109,7 +109,10 @@ namespace Mirror.FizzySteam
         /// </summary>
         /// <param name="target">The steam person we are sending internal message to.</param>
         /// <param name="type">The type of <see cref="InternalMessages"/> we want to send.</param>
-        internal abstract bool SteamSend(CSteamID target, InternalMessages type);
+        internal bool SteamSend(CSteamID target, InternalMessages type)
+        {
+            return SteamNetworking.SendP2PPacket(target, new[] { (byte)type }, 1, EP2PSend.k_EP2PSendReliable, Options.Channels.Length);
+        }
 
         /// <summary>
         ///     Process our internal messages away from mirror.
@@ -129,28 +132,7 @@ namespace Mirror.FizzySteam
         /// <summary>
         ///     Update method to be called by the transport.
         /// </summary>
-        private void Update()
-        {
-            while (Connected)
-            {
-                while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
-                {
-                    if (internalMessage.Length != 1) continue;
-
-                    OnReceiveInternalData((InternalMessages) internalMessage[0], clientSteamId);
-
-                    break;
-                }
-
-                for (int chNum = 0; chNum < Options.Channels.Length; chNum++)
-                {
-                    while (DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, chNum))
-                    {
-                        OnReceiveData(receiveBuffer, clientSteamId, chNum);
-                    }
-                }
-            }
-        }
+        protected abstract void ProcessIncomingMessages();
 
         /// <summary>
         ///     Check to see if we have received any data from steam users.
@@ -159,7 +141,7 @@ namespace Mirror.FizzySteam
         /// <param name="receiveBuffer">The data that was sent to use.</param>
         /// <param name="channel">The channel the data was sent on.</param>
         /// <returns></returns>
-        private bool DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, int channel)
+        protected bool DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, int channel)
         {
             if (!SteamworksManager.Instance.Initialized)
             {
