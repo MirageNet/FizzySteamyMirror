@@ -17,7 +17,6 @@ namespace Mirror.FizzySteam
 
         private static readonly ILogger Logger = LogFactory.GetLogger(typeof(SteamCommon));
 
-        private Task _pollDataTask = Task.CompletedTask;
         private readonly CancellationTokenSource _cancellationToken = new CancellationTokenSource();
         private Callback<P2PSessionConnectFail_t> _connectionFailure;
         internal readonly ConcurrentQueue<Message> QueuedData = new ConcurrentQueue<Message>();
@@ -34,7 +33,7 @@ namespace Mirror.FizzySteam
         {
             Options = options;
             _connectionFailure = Callback<P2PSessionConnectFail_t>.Create(OnConnectionFailed);
-            _pollDataTask = Task.Run(Update);
+            _= Task.Run(Update);
         }
 
         public virtual void Disconnect()

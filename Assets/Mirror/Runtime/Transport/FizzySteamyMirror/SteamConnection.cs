@@ -78,6 +78,21 @@ namespace Mirror.FizzySteam
             return null;
         }
 
+        #region Overrides of SteamCommon
+
+        /// <summary>
+        ///     Connection request has failed to connect to user.
+        /// </summary>
+        /// <param name="result">The information back from steam.</param>
+        protected override void OnConnectionFailed(P2PSessionConnectFail_t result)
+        {
+            base.OnConnectionFailed(result);
+
+            Disconnect();
+        }
+
+        #endregion
+
         /// <summary>
         ///     Process our internal messages away from mirror.
         /// </summary>
