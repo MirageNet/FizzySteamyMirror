@@ -24,7 +24,7 @@ public class SteamworksManager : MonoBehaviour {
 	protected static bool s_EverInitialized = false;
 
 	protected static SteamworksManager s_Instance;
-	protected static SteamworksManager Instance {
+	protected internal static SteamworksManager Instance {
 		get {
 			if (s_Instance == null) {
 				return new GameObject("SteamManager").AddComponent<SteamworksManager>();
@@ -36,7 +36,7 @@ public class SteamworksManager : MonoBehaviour {
 	}
 
 	protected bool m_bInitialized = false;
-	public static bool Initialized {
+	public bool Initialized {
 		get {
 			return Instance.m_bInitialized;
 		}
