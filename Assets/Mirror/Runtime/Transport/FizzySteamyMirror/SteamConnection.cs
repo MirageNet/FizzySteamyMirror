@@ -90,7 +90,7 @@ namespace Mirror.FizzySteam
         {
             base.OnConnectionFailed(result);
 
-            _connectedComplete.SetCanceled();
+            _connectedComplete.TrySetCanceled();
         }
 
         #endregion
