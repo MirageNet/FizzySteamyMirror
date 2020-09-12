@@ -1,3 +1,5 @@
+#if UNITY_EDITOR
+
 // This file is provided under The MIT License as part of Steamworks.NET.
 // Copyright (c) 2013-2019 Riley Labrecque
 // Please see the included LICENSE.txt for additional information.
@@ -272,3 +274,5 @@ public class RedistInstall {
 	}
 #endif // UNITY_5 || UNITY_2017 || UNITY_2017_1_OR_NEWER
 }
+
+#endif

@@ -1,3 +1,5 @@
+#if UNITY_EDITOR
+
 // This file is provided under The MIT License as part of Steamworks.NET.
 // Copyright (c) 2013-2019 Riley Labrecque
 // Please see the included LICENSE.txt for additional information.
@@ -10,7 +12,7 @@
 
 // Add 'DISABLEREDISTCOPY' to your custom platform defines to disable automatic copying!
 #if UNITY_5_3_OR_NEWER
-	#define DISABLEREDISTCOPY
+#define DISABLEREDISTCOPY
 #endif // UNITY_5_3_OR_NEWER
 
 using UnityEngine;
@@ -112,3 +114,5 @@ public class RedistCopy {
 }
 
 #endif // !DISABLESTEAMWORKS
+
+#endif
