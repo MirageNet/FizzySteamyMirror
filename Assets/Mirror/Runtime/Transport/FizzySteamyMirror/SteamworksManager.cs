@@ -11,7 +11,6 @@
 
 using UnityEngine;
 #if !DISABLESTEAMWORKS
-using System.Collections;
 using Steamworks;
 #endif
 
@@ -24,14 +23,14 @@ public class SteamworksManager : MonoBehaviour {
 #if !DISABLESTEAMWORKS
 	protected static bool s_EverInitialized = false;
 
-	protected static SteamManager s_instance;
-	protected static SteamManager Instance {
+	protected static SteamworksManager s_Instance;
+	protected static SteamworksManager Instance {
 		get {
-			if (s_instance == null) {
-				return new GameObject("SteamManager").AddComponent<SteamManager>();
+			if (s_Instance == null) {
+				return new GameObject("SteamManager").AddComponent<SteamworksManager>();
 			}
 			else {
-				return s_instance;
+				return s_Instance;
 			}
 		}
 	}
@@ -60,11 +59,11 @@ public class SteamworksManager : MonoBehaviour {
 
 	protected virtual void Awake() {
 		// Only one instance of SteamManager at a time!
-		if (s_instance != null) {
+		if (s_Instance != null) {
 			Destroy(gameObject);
 			return;
 		}
-		s_instance = this;
+		s_Instance = this;
 
 		if(s_EverInitialized) {
 			// This is almost always an error.
@@ -125,8 +124,8 @@ public class SteamworksManager : MonoBehaviour {
 
 	// This should only ever get called on first load and after an Assembly reload, You should never Disable the Steamworks Manager yourself.
 	protected virtual void OnEnable() {
-		if (s_instance == null) {
-			s_instance = this;
+		if (s_Instance == null) {
+			s_Instance = this;
 		}
 
 		if (!m_bInitialized) {
@@ -145,11 +144,11 @@ public class SteamworksManager : MonoBehaviour {
 	// Because the SteamManager should be persistent and never disabled or destroyed we can shutdown the SteamAPI here.
 	// Thus it is not recommended to perform any Steamworks work in other OnDestroy functions as the order of execution can not be garenteed upon Shutdown. Prefer OnDisable().
 	protected virtual void OnDestroy() {
-		if (s_instance != this) {
+		if (s_Instance != this) {
 			return;
 		}
 
-		s_instance = null;
+		s_Instance = null;
 
 		if (!m_bInitialized) {
 			return;
