@@ -1,9 +1,9 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -33,7 +33,7 @@ namespace Mirror.FizzySteam
         {
             Options = options;
             _connectionFailure = Callback<P2PSessionConnectFail_t>.Create(OnConnectionFailed);
-            _ = Task.Run(ProcessIncomingMessages);
+            _ = UniTask.Run(ProcessIncomingMessages);
         }
 
         public virtual void Disconnect()

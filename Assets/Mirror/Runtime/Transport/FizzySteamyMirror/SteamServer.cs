@@ -1,9 +1,9 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -66,7 +66,7 @@ namespace Mirror.FizzySteam
         ///     uses events to trigger connections versus a real listening connection.
         /// </summary>
         /// <returns></returns>
-        public async Task<SteamConnection> QueuedConnectionsAsync()
+        public async UniTask<SteamConnection> QueuedConnectionsAsync()
         {
             // Check to see if we received a connection message.
             if (_connectionQueue.Count <= 0) return null;
@@ -94,7 +94,7 @@ namespace Mirror.FizzySteam
 
             SteamSend(_msgBuffer.steamId, InternalMessages.Accept);
 
-            return await Task.FromResult(_msgBuffer.steamId == CSteamID.Nil ? null : client);
+            return await UniTask.FromResult(_msgBuffer.steamId == CSteamID.Nil ? null : client);
 
         }
 

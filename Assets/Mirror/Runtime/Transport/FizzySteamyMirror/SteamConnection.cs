@@ -1,9 +1,9 @@
-﻿#region Statements
+#region Statements
 
 using System;
 using System.IO;
 using System.Net;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -20,7 +20,7 @@ namespace Mirror.FizzySteam
         private byte[] _clientSendPoolData;
         private Message _clientReceivePoolData;
         private Message _clientQueuePoolData;
-        private TaskCompletionSource<Task> _connectedComplete;
+        private UniTaskCompletionSource<UniTask> _connectedComplete;
 
         #endregion
 
@@ -30,7 +30,7 @@ namespace Mirror.FizzySteam
         ///     Connect to server.
         /// </summary>
         /// <returns></returns>
-        public async Task<IConnection> ConnectAsync()
+        public async UniTask<IConnection> ConnectAsync()
         {
             if (Logger.logEnabled) Logger.Log($"SteamConnection attempting connection to {Options.ConnectionAddress}");
 
@@ -43,12 +43,11 @@ namespace Mirror.FizzySteam
                 // Send a message to server to initiate handshake connection
                 SteamSend(Options.ConnectionAddress, InternalMessages.Connect);
 
-                _connectedComplete = new TaskCompletionSource<Task>();
-                Task connectedCompleteTask = _connectedComplete.Task;
+                _connectedComplete = new UniTaskCompletionSource<UniTask>();
+                UniTask connectedCompleteTask = _connectedComplete.Task;
 
-                while (await Task.WhenAny(connectedCompleteTask,
-                           Task.Delay(TimeSpan.FromSeconds(Math.Max(1, Options.ConnectionTimeOut)))) !=
-                       connectedCompleteTask)
+                while (await UniTask.WhenAny(connectedCompleteTask,
+                           UniTask.Delay(TimeSpan.FromSeconds(Math.Max(1, Options.ConnectionTimeOut)))) != 0)
                 {
                     if (Logger.logEnabled)
                         Logger.LogError(
@@ -111,7 +110,7 @@ namespace Mirror.FizzySteam
                     if (Logger.logEnabled)
                         Logger.Log("Received internal message of server accepted our request to connect.");
 
-                    _connectedComplete.SetResult(_connectedComplete.Task);
+                    _connectedComplete.TrySetResult(_connectedComplete.Task);
 
                     break;
                 case InternalMessages.Disconnect:
@@ -214,10 +213,12 @@ namespace Mirror.FizzySteam
         /// </summary>
         /// <param name="data">The data we want to send.</param>
         /// <returns>Whether or not we sent our data.</returns>
-        public Task SendAsync(ArraySegment<byte> data)
+        public UniTask SendAsync(ArraySegment<byte> data)
         {
+            SendAsync(data, 0);
             // Default send to reliable channel;
-            return !Connected ? null : SendAsync(data, 0);
+
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
@@ -225,7 +226,7 @@ namespace Mirror.FizzySteam
         /// </summary>
         /// <param name="buffer">The buffer we need to write data too.</param>
         /// <returns></returns>
-        public async Task<bool> ReceiveAsync(MemoryStream buffer)
+        public async UniTask<bool> ReceiveAsync(MemoryStream buffer)
         {
             try
             {
@@ -239,7 +240,7 @@ namespace Mirror.FizzySteam
                     // using mirror.
                     if (!Connected) return false;
 
-                    await Task.Delay(1);
+                    await UniTask.Delay(1);
                 }
 
                 QueuedData.TryDequeue(out _clientReceivePoolData);
@@ -275,7 +276,7 @@ namespace Mirror.FizzySteam
             SteamSend(Options.ConnectionAddress, InternalMessages.Disconnect);
 
             // Wait 1 seconds to make sure the disconnect message gets fired.
-            await Task.Delay(1000);
+            await UniTask.Delay(1000);
 
             base.Disconnect();
 
@@ -297,15 +298,17 @@ namespace Mirror.FizzySteam
         /// <param name="data">The data we want to send.</param>
         /// <param name="channel">The channel we want to send it on.</param>
         /// <returns></returns>
-        public Task SendAsync(ArraySegment<byte> data, int channel)
+        public UniTask SendAsync(ArraySegment<byte> data, int channel)
         {
-            if (!Connected) return null;
+            if (!Connected) return UniTask.CompletedTask;
 
             _clientSendPoolData = new byte[data.Count];
 
             Array.Copy(data.Array, data.Offset, _clientSendPoolData, 0, data.Count);
 
-            return Send(Options.ConnectionAddress, _clientSendPoolData, channel) ? Task.CompletedTask : null;
+            Send(Options.ConnectionAddress, _clientSendPoolData, channel);
+
+            return UniTask.CompletedTask;
         }
 
         #endregion
