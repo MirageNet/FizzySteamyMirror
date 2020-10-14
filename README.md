@@ -1,8 +1,8 @@
-FizzySteamworks
+SteamyNG
 
 MirrorNG docs and the official community Discord.
 
-FizzySteamworks brings together Steam and MirrorNG utilising Async of a Steam P2P network transport layer for MirrorNG.
+SteamyNG brings together Steam and MirrorNG utilising Async of a Steam P2P network transport layer for MirrorNG.
 Dependencies
 
 Both of these projects need to be installed and working before you can use this transport.
