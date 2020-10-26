@@ -145,7 +145,7 @@ namespace Mirror.FizzySteam
 
                     break;
                 case InternalMessages.Connect:
-                    _msgBuffer = new Message(clientSteamId, InternalMessages.Connect, new[] {(byte) type});
+                    _msgBuffer = new Message(clientSteamId, InternalMessages.Connect, new[] {(byte) type}, Options.Channels.Length);
 
                     _connectionQueue.Enqueue(_msgBuffer);
                     break;
@@ -180,16 +180,11 @@ namespace Mirror.FizzySteam
         /// <param name="channel">The channel the data was received on.</param>
         protected override void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel)
         {
-            var dataMsg = new Message(clientSteamId, InternalMessages.Data, data);
+            var dataMsg = new Message(clientSteamId, InternalMessages.Data, data, channel);
 
             if (Logger.logEnabled)
                 Logger.Log(
                     $"SteamConnection: Queue up message Event Type: {dataMsg.eventType} data: {BitConverter.ToString(dataMsg.data)}");
-            
-            // We need to check if data is from a user and pass it to the correct queue system
-            // due to how mirrorng works we cant just event listener it.
-            //if (_connectedSteamUsers.ContainsKey(clientSteamId))
-            //    _connectedSteamUsers[clientSteamId].QueuedData.Enqueue(dataMsg);
         }
 
         #endregion

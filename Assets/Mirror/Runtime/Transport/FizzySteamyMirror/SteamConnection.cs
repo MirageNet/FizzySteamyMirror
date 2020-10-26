@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Security.Authentication.ExtendedProtection;
 using Cysharp.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
@@ -11,7 +12,7 @@ using UnityEngine;
 
 namespace Mirror.FizzySteam
 {
-    public class SteamConnection : SteamCommon, IChannelConnection
+    public class SteamConnection : SteamCommon, IConnection
     {
         private static readonly ILogger Logger = LogFactory.GetLogger(typeof(SteamConnection));
 
@@ -173,7 +174,7 @@ namespace Mirror.FizzySteam
         {
             if(!Connected) return;
 
-            _clientQueuePoolData = new Message(clientSteamId, InternalMessages.Data, data);
+            _clientQueuePoolData = new Message(clientSteamId, InternalMessages.Data, data, channel);
 
             if (Logger.logEnabled)
                 Logger.Log(
@@ -209,28 +210,15 @@ namespace Mirror.FizzySteam
         #region Implementation of IConnection
 
         /// <summary>
-        ///     Send data on default reliable channel.
-        /// </summary>
-        /// <param name="data">The data we want to send.</param>
-        /// <returns>Whether or not we sent our data.</returns>
-        public UniTask SendAsync(ArraySegment<byte> data)
-        {
-            SendAsync(data, 0);
-            // Default send to reliable channel;
-
-            return UniTask.CompletedTask;
-        }
-
-        /// <summary>
         ///     Check if we have data in the pipe line that we need to process
         /// </summary>
         /// <param name="buffer">The buffer we need to write data too.</param>
         /// <returns></returns>
-        public async UniTask<bool> ReceiveAsync(MemoryStream buffer)
+        public async UniTask<int> ReceiveAsync(MemoryStream buffer)
         {
             try
             {
-                if (!Connected) return false;
+                if (!Connected) throw new EndOfStreamException();
 
                 while (QueuedData.Count <= 0)
                 {
@@ -238,7 +226,7 @@ namespace Mirror.FizzySteam
                     // know when server disconnects us truly. So when steam sends a internal disconnect
                     // message we disconnect as normal but the _cancellation Token will trigger and we can exit cleanly
                     // using mirror.
-                    if (!Connected) return false;
+                    if (!Connected) throw new EndOfStreamException();
 
                     await UniTask.Delay(1);
                 }
@@ -253,11 +241,11 @@ namespace Mirror.FizzySteam
 
                 await buffer.WriteAsync(_clientReceivePoolData.data, 0, _clientReceivePoolData.data.Length);
 
-                return true;
+                return _clientReceivePoolData.Channel;
             }
-            catch (ObjectDisposedException)
+            catch (EndOfStreamException)
             {
-                return false;
+                throw new EndOfStreamException();
             }
         }
 
