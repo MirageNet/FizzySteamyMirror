@@ -1,0 +1,15 @@
+{
+    "name": "com.mirrorng.IgnoranceNG",
+    "displayName": "MirrorNG Ignorance",
+    "version": "0.0.1",
+    "unity": "2020.1",
+    "description": "UDP transport for MirrorNG",
+    "author": "Dragon",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/MirrorNG/IgnoranceNG.git"
+    },
+    "dependencies": {
+        "com.mirrorng.mirrorng": "43.3.2"
+    }
+}
