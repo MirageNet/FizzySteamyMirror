@@ -10,10 +10,17 @@ Both of these projects need to be installed and working before you can use this 
     SteamWorks.NET SteamyNG relies on Steamworks.NET to communicate with the Steamworks API. Requires .Net 4.x
     Mirror FizzySteamworks is also obviously dependant on MirrorNG which is a streamline, bug fixed, maintained version of UNET for Unity.
 
-Setting Up
+## Installation
+The preferred installation method is Unity Package manager.
 
-    Install MirrorNG from upm
-    In your "NetworkManager" object replace "Telepathy" script with "SteamyTransport" script.
+If you are using unity 2019.3 or later: 
+
+1) Open your project in unity
+2) Install [MirrorNG](https://github.com/MirrorNG/MirrorNG)
+3) Click on Windows -> Package Manager
+4) Click on the plus sign on the left and click on "Add package from git URL..."
+5) enter https://github.com/MirrorNG/FizzySteamyMirror.git?path=/Assets/Mirror/Runtime/Transport/FizzySteamyMirror
+6) Unity will download and install MirrorNG SteamyNG
 
 Note: The default 480(Spacewar) appid is a very grey area, technically, it's not allowed but they don't really do anything about it. When you have your own appid from steam then replace the 480 with your own game appid. If you know a better way around this please make a Issue ticket.
 Host
