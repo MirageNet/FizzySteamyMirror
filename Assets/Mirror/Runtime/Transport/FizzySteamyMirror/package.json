@@ -1,15 +1,16 @@
 {
-    "name": "com.mirrorng.IgnoranceNG",
-    "displayName": "MirrorNG Ignorance",
+    "name": "com.mirrorng.steamy",
+    "displayName": "MirrorNG SteamyNG",
     "version": "0.0.1",
     "unity": "2020.1",
-    "description": "UDP transport for MirrorNG",
-    "author": "Dragon",
+    "description": "Steam transport for MirrorNG",
+    "author": "MirrorNG",
     "repository": {
         "type": "git",
-        "url": "https://github.com/MirrorNG/IgnoranceNG.git"
+        "url": "https://github.com/MirrorNG/FizzySteamyMirror.git"
     },
     "dependencies": {
-        "com.mirrorng.mirrorng": "43.3.2"
+        "com.cysharp.unitask": "2.0.36",
+        "com.mirrorng.mirrorng": "54.1.1"
     }
 }
