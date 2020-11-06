@@ -9,6 +9,8 @@ Both of these projects need to be installed and working before you can use this 
 
     SteamWorks.NET SteamyNG relies on Steamworks.NET to communicate with the Steamworks API. Requires .Net 4.x
     Mirror FizzySteamworks is also obviously dependant on MirrorNG which is a streamline, bug fixed, maintained version of UNET for Unity.
+    
+FizzySteam is only for 64bit version. If you require 32bit you will need to find the dlls yourself.
 
 ## Installation
 The preferred installation method is Unity Package manager.
