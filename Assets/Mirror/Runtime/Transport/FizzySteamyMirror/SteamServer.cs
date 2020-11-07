@@ -1,9 +1,7 @@
 #region Statements
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
 
@@ -17,10 +15,9 @@ namespace Mirror.FizzySteam
 
         #region Variables
 
+        private readonly Transport _transport;
         private readonly IDictionary<CSteamID, SteamConnection> _connectedSteamUsers;
-        private readonly ConcurrentQueue<Message> _connectionQueue = new ConcurrentQueue<Message>();
         private Callback<P2PSessionRequest_t> _connectionRequest;
-        private Message _msgBuffer;
 
         #endregion
 
@@ -30,14 +27,13 @@ namespace Mirror.FizzySteam
         ///     Initialize new <see cref="SteamServer"/> server connection.
         /// </summary>
         /// <param name="options">The options we want our server to run.</param>
-        public SteamServer(SteamOptions options) : base(options)
+        /// <param name="transport">Transport to attach to.</param>
+        public SteamServer(SteamOptions options, Transport transport) : base(options)
         {
             Options = options;
             _connectedSteamUsers = new Dictionary<CSteamID, SteamConnection>(Options.MaxConnections);
 
-            SteamNetworking.AllowP2PPacketRelay(Options.AllowSteamRelay);
-
-            _connectionRequest = Callback<P2PSessionRequest_t>.Create(OnConnectionRequest);
+            _transport = transport;
         }
 
         /// <summary>
@@ -61,46 +57,15 @@ namespace Mirror.FizzySteam
             SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote);
         }
 
-        /// <summary>
-        ///     Steam transport way of scanning for connections as steam itself
-        ///     uses events to trigger connections versus a real listening connection.
-        /// </summary>
-        /// <returns></returns>
-        public async UniTask<SteamConnection> QueuedConnectionsAsync()
-        {
-            // Check to see if we received a connection message.
-            if (_connectionQueue.Count <= 0) return null;
-
-            // It was data connection let's pull data out.
-            _connectionQueue.TryDequeue(out _msgBuffer);
-
-            if (_connectedSteamUsers.Count >= Options.MaxConnections)
-            {
-                SteamSend(_msgBuffer.steamId, InternalMessages.TooManyUsers);
-
-                return null;
-            }
-
-            if (_connectedSteamUsers.ContainsKey(_msgBuffer.steamId)) return null;
-
-            Options.ConnectionAddress = _msgBuffer.steamId;
-
-            var client = new SteamConnection(Options);
-
-            if (Logger.logEnabled)
-                Logger.Log($"SteamServer connecting with {_msgBuffer.steamId} and accepting handshake.");
-
-            _connectedSteamUsers.Add(_msgBuffer.steamId, client);
-
-            SteamSend(_msgBuffer.steamId, InternalMessages.Accept);
-
-            return await UniTask.FromResult(_msgBuffer.steamId == CSteamID.Nil ? null : client);
-
-        }
-
         public void StartListening()
         {
             if (Logger.logEnabled) Logger.Log("SteamServer listening for incoming connections....");
+
+            SteamNetworking.AllowP2PPacketRelay(Options.AllowSteamRelay);
+
+            _connectionRequest = Callback<P2PSessionRequest_t>.Create(OnConnectionRequest);
+
+            _transport.Started.Invoke();
         }
 
         #endregion
@@ -116,8 +81,10 @@ namespace Mirror.FizzySteam
 
             base.Disconnect();
 
-            _connectionRequest.Dispose();
+            _connectionRequest?.Dispose();
             _connectionRequest = null;
+
+            _connectedSteamUsers.Clear();
         }
 
         /// <summary>
@@ -133,7 +100,7 @@ namespace Mirror.FizzySteam
                     if (Logger.logEnabled)
                         Logger.Log("Received internal message to disconnect steam user.");
 
-                    if (_connectedSteamUsers.TryGetValue(clientSteamId, out var connection))
+                    if (_connectedSteamUsers.TryGetValue(clientSteamId, out SteamConnection connection))
                     {
                         connection.Disconnect();
                         SteamNetworking.CloseP2PSessionWithUser(clientSteamId);
@@ -145,9 +112,28 @@ namespace Mirror.FizzySteam
 
                     break;
                 case InternalMessages.Connect:
-                    _msgBuffer = new Message(clientSteamId, InternalMessages.Connect, new[] {(byte) type}, Options.Channels.Length);
 
-                    _connectionQueue.Enqueue(_msgBuffer);
+                    if (_connectedSteamUsers.Count >= Options.MaxConnections)
+                    {
+                        SteamSend(clientSteamId, InternalMessages.TooManyUsers);
+
+                        return;
+                    }
+
+                    if (_connectedSteamUsers.ContainsKey(clientSteamId)) return;
+
+                    Options.ConnectionAddress = clientSteamId;
+
+                    var client = new SteamConnection(Options);
+
+                    _transport.Connected.Invoke(client);
+
+                    if (Logger.logEnabled)
+                        Logger.Log($"SteamServer connecting with {clientSteamId} and accepting handshake.");
+
+                    _connectedSteamUsers.Add(clientSteamId, client);
+
+                    SteamSend(clientSteamId, InternalMessages.Accept);
                     break;
                 default:
                     if (Logger.logEnabled)

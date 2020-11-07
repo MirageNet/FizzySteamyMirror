@@ -24,10 +24,11 @@ namespace Mirror.FizzySteam
 
         [SerializeField] private int _maxP2PConnections = 4;
 
-        [Header("Steam Client Config")] [SerializeField]
-        private int _clientConnectionTimeout = 30;
+        [Header("Steam Client Config")] [SerializeField, Range(1,10)]
+        private int _clientConnectionTimeout = 10;
 
         private SteamServer _server;
+        private AutoResetUniTaskCompletionSource _listenCompletionSource;
 
         public Action<ErrorCodes, string> Error;
 
@@ -57,11 +58,13 @@ namespace Mirror.FizzySteam
                 Channels = Channels
             };
 
-            _server = new SteamServer(op);
+            _server = new SteamServer(op, this);
 
             _server.StartListening();
 
-            return UniTask.CompletedTask;
+            _listenCompletionSource = AutoResetUniTaskCompletionSource.Create();
+
+            return _listenCompletionSource.Task;
         }
 
         /// <summary>
@@ -72,6 +75,8 @@ namespace Mirror.FizzySteam
             if(Logger.logEnabled)
                 Logger.Log("MirrorNGSteamTransport shutting down.");
 
+            _listenCompletionSource?.TrySetResult();
+
             _server?.Disconnect();
             _server = null;
         }
@@ -81,7 +86,7 @@ namespace Mirror.FizzySteam
         /// </summary>
         /// <param name="uri">The address we want to connect to using steam ids.</param>
         /// <returns></returns>
-        public override UniTask<IConnection> ConnectAsync(Uri uri)
+        public override async UniTask<IConnection> ConnectAsync(Uri uri)
         {
             var op = new SteamOptions
             {
@@ -95,40 +100,9 @@ namespace Mirror.FizzySteam
 
             client.Error += (errorCode, message) => Error?.Invoke(errorCode, message);
 
-            return client.ConnectAsync();
-        }
+            await client.ConnectAsync();
 
-        /// <summary>
-        ///     Start listening on the server for client connections.
-        ///     Due to how steam works we must create our own endless loop to fake how sockets
-        ///     would work.
-        /// </summary>
-        /// <returns>Sends back a <see cref="SteamClient"/> connection back to mirror.</returns>
-        public override async UniTask<IConnection> AcceptAsync()
-        {
-            // Steam has no way to do async accepting of connections
-            // so we create a fake loop to keep server running.
-            try
-            {
-                while (_server?.Connected != null && (bool) _server?.Connected)
-                {
-                    SteamConnection client = await _server.QueuedConnectionsAsync();
-
-                    if (client != null)
-                    {
-                        return client;
-                    }
-
-                    await UniTask.Delay(1);
-                }
-
-                return null;
-            }
-            catch (ObjectDisposedException)
-            {
-                // expected,  the connection was closed
-                return null;
-            }
+            return client;
         }
 
         /// <summary>

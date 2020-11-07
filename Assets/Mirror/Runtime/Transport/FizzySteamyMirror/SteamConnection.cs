@@ -3,7 +3,6 @@
 using System;
 using System.IO;
 using System.Net;
-using System.Security.Authentication.ExtendedProtection;
 using Cysharp.Threading.Tasks;
 using Steamworks;
 using UnityEngine;
@@ -21,7 +20,7 @@ namespace Mirror.FizzySteam
         private byte[] _clientSendPoolData;
         private Message _clientReceivePoolData;
         private Message _clientQueuePoolData;
-        private UniTaskCompletionSource<UniTask> _connectedComplete;
+        private AutoResetUniTaskCompletionSource _connectedComplete;
 
         #endregion
 
@@ -31,11 +30,11 @@ namespace Mirror.FizzySteam
         ///     Connect to server.
         /// </summary>
         /// <returns></returns>
-        public async UniTask<IConnection> ConnectAsync()
+        public async UniTask ConnectAsync()
         {
             if (Logger.logEnabled) Logger.Log($"SteamConnection attempting connection to {Options.ConnectionAddress}");
 
-            if(SteamNetworking.GetP2PSessionState(Options.ConnectionAddress, out var connectionState))
+            if(SteamNetworking.GetP2PSessionState(Options.ConnectionAddress, out P2PSessionState_t connectionState))
                 if (bool.Parse(connectionState.m_bConnectionActive.ToString()))
                     SteamNetworking.CloseP2PSessionWithUser(Options.ConnectionAddress);
 
@@ -44,10 +43,9 @@ namespace Mirror.FizzySteam
                 // Send a message to server to initiate handshake connection
                 SteamSend(Options.ConnectionAddress, InternalMessages.Connect);
 
-                _connectedComplete = new UniTaskCompletionSource<UniTask>();
-                UniTask connectedCompleteTask = _connectedComplete.Task;
+                _connectedComplete = AutoResetUniTaskCompletionSource.Create();
 
-                while (await UniTask.WhenAny(connectedCompleteTask,
+                while (await UniTask.WhenAny(_connectedComplete.Task,
                            UniTask.Delay(TimeSpan.FromSeconds(Math.Max(1, Options.ConnectionTimeOut)))) != 0)
                 {
                     if (Logger.logEnabled)
@@ -57,10 +55,12 @@ namespace Mirror.FizzySteam
                     Error.Invoke(ErrorCodes.ConnectionFailed,
                         "SteamConnection connection to {Options.ConnectionAddress.m_SteamID} timed out.");
 
-                    return null;
+                    Disconnect();
                 }
 
-                return this;
+                // Everything went good let's just return.
+                // We need to switch to main thread for some reason.
+                await UniTask.SwitchToMainThread();
             }
             catch (FormatException)
             {
@@ -77,7 +77,7 @@ namespace Mirror.FizzySteam
                     Logger.LogError($"SteamConnection error: {ex.Message}");
             }
 
-            return null;
+            Disconnect();
         }
 
         #region Overrides of SteamCommon
@@ -111,7 +111,7 @@ namespace Mirror.FizzySteam
                     if (Logger.logEnabled)
                         Logger.Log("Received internal message of server accepted our request to connect.");
 
-                    _connectedComplete.TrySetResult(_connectedComplete.Task);
+                    _connectedComplete.TrySetResult();
 
                     break;
                 case InternalMessages.Disconnect:
@@ -127,7 +127,7 @@ namespace Mirror.FizzySteam
                     if (Logger.logEnabled)
                         Logger.Log("Received internal message that there are too many users connected to server.");
 
-                    // TODO Implement way to tell users server is full? Or does mirror do this?
+                    Error.Invoke(ErrorCodes.k_EP2PSessionErrorMax, "Too many users currently connected.");
 
                     break;
                 default:
@@ -269,6 +269,8 @@ namespace Mirror.FizzySteam
             base.Disconnect();
 
             SteamNetworking.CloseP2PSessionWithUser(Options.ConnectionAddress);
+
+            _connectedComplete?.TrySetCanceled();
         }
 
         /// <summary>
