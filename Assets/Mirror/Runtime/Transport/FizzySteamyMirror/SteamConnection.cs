@@ -18,8 +18,6 @@ namespace Mirror.FizzySteam
         #region Variables
 
         private byte[] _clientSendPoolData;
-        private Message _clientReceivePoolData;
-        private Message _clientQueuePoolData;
         private AutoResetUniTaskCompletionSource _connectedComplete;
 
         #endregion
@@ -56,6 +54,8 @@ namespace Mirror.FizzySteam
                         "SteamConnection connection to {Options.ConnectionAddress.m_SteamID} timed out.");
 
                     Disconnect();
+
+                    return;
                 }
 
                 // Everything went good let's just return.
@@ -90,7 +90,7 @@ namespace Mirror.FizzySteam
         {
             base.OnConnectionFailed(result);
 
-            _connectedComplete.TrySetCanceled();
+            Disconnect();
         }
 
         #endregion
@@ -139,48 +139,22 @@ namespace Mirror.FizzySteam
         }
 
         /// <summary>
-        ///     Process incoming messages.
-        /// </summary>
-        protected override void ProcessIncomingMessages()
-        {
-            while (Connected)
-            {
-                while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
-                {
-                    if (internalMessage.Length != 1) continue;
-
-                    OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamId);
-
-                    break;
-                }
-
-                for (int chNum = 0; chNum < Options.Channels.Length; chNum++)
-                {
-                    while (DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, chNum))
-                    {
-                        OnReceiveData(receiveBuffer, clientSteamId, chNum);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         ///     Process data incoming from steam backend.
         /// </summary>
         /// <param name="data">The data that has come in.</param>
         /// <param name="clientSteamId">The client the data came from.</param>
         /// <param name="channel">The channel the data was received on.</param>
-        protected override void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel)
+        internal override void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel)
         {
             if(!Connected) return;
 
-            _clientQueuePoolData = new Message(clientSteamId, InternalMessages.Data, data, channel);
+            var clientQueuePoolData = new Message(clientSteamId, InternalMessages.Data, data, channel);
 
             if (Logger.logEnabled)
                 Logger.Log(
-                    $"SteamConnection: Queue up message Event Type: {_clientQueuePoolData.eventType} data: {BitConverter.ToString(_clientQueuePoolData.data)}");
+                    $"SteamConnection: Queue up message Event Type: {clientQueuePoolData.eventType} data: {BitConverter.ToString(clientQueuePoolData.data)}");
 
-            QueuedData.Enqueue(_clientQueuePoolData);
+            QueuedData.Enqueue(clientQueuePoolData);
         }
 
         /// <summary>
@@ -199,10 +173,15 @@ namespace Mirror.FizzySteam
         ///     Initialize <see cref="SteamConnection"/>
         /// </summary>
         /// <param name="options"></param>
-        public SteamConnection(SteamOptions options) : base(options)
+        /// <param name="serverControlled">Is the data being processed by server or client.</param>
+        public SteamConnection(SteamOptions options, bool serverControlled) : base(options)
         {
             Options = options;
             SteamNetworking.AllowP2PPacketRelay(Options.AllowSteamRelay);
+
+            if (serverControlled) return;
+
+            UniTask.Run(ProcessIncomingMessages).Forget();
         }
 
         #endregion
@@ -231,17 +210,17 @@ namespace Mirror.FizzySteam
                     await UniTask.Delay(1);
                 }
 
-                QueuedData.TryDequeue(out _clientReceivePoolData);
+                QueuedData.TryDequeue(out var clientReceivePoolData);
 
                 buffer.SetLength(0);
 
                 if (Logger.logEnabled)
                     Logger.Log(
-                        $"SteamConnection processing message: {BitConverter.ToString(_clientReceivePoolData.data)}");
+                        $"SteamConnection processing message: {BitConverter.ToString(clientReceivePoolData.data)}");
 
-                await buffer.WriteAsync(_clientReceivePoolData.data, 0, _clientReceivePoolData.data.Length);
+                await buffer.WriteAsync(clientReceivePoolData.data, 0, clientReceivePoolData.data.Length);
 
-                return _clientReceivePoolData.Channel;
+                return clientReceivePoolData.Channel;
             }
             catch (EndOfStreamException)
             {

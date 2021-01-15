@@ -33,11 +33,16 @@ namespace Mirror.FizzySteam
         {
             Options = options;
             _connectionFailure = Callback<P2PSessionConnectFail_t>.Create(OnConnectionFailed);
-            _ = UniTask.Run(ProcessIncomingMessages);
         }
 
         public virtual void Disconnect()
         {
+            // Empty the queue out because we are losing connection.
+            while (!QueuedData.IsEmpty)
+            {
+                QueuedData.TryDequeue(out _);
+            }
+
             _cancellationToken?.Cancel();
             _connectionFailure?.Dispose();
             _connectionFailure = null;
@@ -127,12 +132,37 @@ namespace Mirror.FizzySteam
         /// <param name="data">The data that has come in.</param>
         /// <param name="clientSteamId">The client the data came from.</param>
         /// <param name="channel">The channel the data was received on.</param>
-        protected abstract void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel);
+        internal abstract void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel);
 
         /// <summary>
         ///     Update method to be called by the transport.
         /// </summary>
-        protected abstract void ProcessIncomingMessages();
+        protected async void ProcessIncomingMessages()
+        {
+            while (Connected)
+            {
+                while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
+                {
+                    if (internalMessage.Length == 1)
+                    {
+                        OnReceiveInternalData((InternalMessages) internalMessage[0], clientSteamId);
+                    }
+
+                    if (Logger.logEnabled)
+                        Logger.Log("[SteamCommon] - Incorrect package length on internal channel.");
+                }
+
+                for (int chNum = 0; chNum < Options.Channels.Length; chNum++)
+                {
+                    while (DataAvailable(out CSteamID clientSteamId, out byte[] receiveBuffer, chNum))
+                    {
+                        OnReceiveData(receiveBuffer, clientSteamId, chNum);
+                    }
+                }
+
+                await UniTask.Delay(1);
+            }
+        }
 
         /// <summary>
         ///     Check to see if we have received any data from steam users.

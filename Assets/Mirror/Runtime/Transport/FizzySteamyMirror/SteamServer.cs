@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using Steamworks;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 #endregion
 
@@ -34,6 +35,8 @@ namespace Mirror.FizzySteam
             _connectedSteamUsers = new Dictionary<CSteamID, SteamConnection>(Options.MaxConnections);
 
             _transport = transport;
+
+            UniTask.Run(ProcessIncomingMessages).Forget();
         }
 
         /// <summary>
@@ -103,7 +106,7 @@ namespace Mirror.FizzySteam
                     if (_connectedSteamUsers.TryGetValue(clientSteamId, out SteamConnection connection))
                     {
                         connection.Disconnect();
-                        SteamNetworking.CloseP2PSessionWithUser(clientSteamId);
+
                         _connectedSteamUsers.Remove(clientSteamId);
 
                         if (Logger.logEnabled)
@@ -124,7 +127,7 @@ namespace Mirror.FizzySteam
 
                     Options.ConnectionAddress = clientSteamId;
 
-                    var client = new SteamConnection(Options);
+                    var client = new SteamConnection(Options, true);
 
                     _transport.Connected.Invoke(client);
 
@@ -143,34 +146,22 @@ namespace Mirror.FizzySteam
             }
         }
 
-        protected override void ProcessIncomingMessages()
-        {
-            while (Connected)
-            {
-                while (DataAvailable(out CSteamID clientSteamId, out byte[] internalMessage, Options.Channels.Length))
-                {
-                    if (internalMessage.Length != 1) continue;
-
-                    OnReceiveInternalData((InternalMessages)internalMessage[0], clientSteamId);
-
-                    break;
-                }
-            }
-        }
-
         /// <summary>
         ///     Process data incoming from steam backend.
         /// </summary>
         /// <param name="data">The data that has come in.</param>
         /// <param name="clientSteamId">The client the data came from.</param>
         /// <param name="channel">The channel the data was received on.</param>
-        protected override void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel)
+        internal override void OnReceiveData(byte[] data, CSteamID clientSteamId, int channel)
         {
-            var dataMsg = new Message(clientSteamId, InternalMessages.Data, data, channel);
+            if (_connectedSteamUsers.TryGetValue(clientSteamId, out SteamConnection client))
+            {
+                client.OnReceiveData(data, clientSteamId, channel);
+            }
 
             if (Logger.logEnabled)
                 Logger.Log(
-                    $"SteamConnection: Queue up message Event Type: {dataMsg.eventType} data: {BitConverter.ToString(dataMsg.data)}");
+                    $"SteamConnection: Queue up message Event Type: {InternalMessages.Data} data: {BitConverter.ToString(data)}");
         }
 
         #endregion
