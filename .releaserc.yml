@@ -4,14 +4,14 @@
         "@semantic-release/release-notes-generator", 
         "@semantic-release/commit-analyzer",
         ["@semantic-release/changelog", {
-            "changelogFile": "Assets/Mirror/Runtime/Transport/FizzySteamyMirror/CHANGELOG.md",
+            "changelogFile": "Assets/Mirage/Runtime/Transport/FizzySteamyMirror/CHANGELOG.md",
         }],
         ["@semantic-release/npm", {
             "npmPublish": false,
-            "pkgRoot": "Assets/Mirror/Runtime/Transport/FizzySteamyMirror"
+            "pkgRoot": "Assets/Mirage/Runtime/Transport/FizzySteamyMirror"
         }],
         ["@semantic-release/git", {
-            "assets": ["Assets/Mirror/Runtime/Transport/FizzySteamyMirror/package.json", "Assets/Mirror/Runtime/Transport/FizzySteamyMirror/CHANGELOG.md"],
+            "assets": ["Assets/Mirage/Runtime/Transport/FizzySteamyMirror/package.json", "Assets/Mirage/Runtime/Transport/FizzySteamyMirror/CHANGELOG.md"],
             "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
         }],
     ]
