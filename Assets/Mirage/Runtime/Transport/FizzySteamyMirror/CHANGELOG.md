@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.0...v1.0.1) (2021-02-18)
+
+
+### Bug Fixes
+
+* folder names ([4744520](https://github.com/MirageNet/FizzySteamyMirror/commit/4744520aef6824ff53c669a83543c7b372060e61))
+
 # 1.0.0 (2021-01-15)
 
 
