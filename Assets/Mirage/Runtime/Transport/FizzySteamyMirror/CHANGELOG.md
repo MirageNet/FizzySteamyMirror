@@ -1,3 +1,11 @@
+## [1.0.3](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.2...v1.0.3) (2021-02-19)
+
+
+### Bug Fixes
+
+* readme ([fbdfc16](https://github.com/MirageNet/FizzySteamyMirror/commit/fbdfc16895638627413723aead8cfd57875436f8))
+* transport fixed for new mirage namespace change. ([dd07871](https://github.com/MirageNet/FizzySteamyMirror/commit/dd078715e8bca35ba253ee60fcfdd3ce40eac654))
+
 ## [1.0.2](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.1...v1.0.2) (2021-02-19)
 
 
