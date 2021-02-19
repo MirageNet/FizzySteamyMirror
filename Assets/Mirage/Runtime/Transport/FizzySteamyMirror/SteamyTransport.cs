@@ -8,7 +8,7 @@ using UnityEngine;
 
 #endregion
 
-namespace Mirror.FizzySteam
+namespace Mirage.FizzySteam
 {
     public class SteamyTransport : Transport
     {

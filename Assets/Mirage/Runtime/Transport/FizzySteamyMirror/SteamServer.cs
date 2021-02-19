@@ -8,7 +8,7 @@ using Cysharp.Threading.Tasks;
 
 #endregion
 
-namespace Mirror.FizzySteam
+namespace Mirage.FizzySteam
 {
     public class SteamServer : SteamCommon
     {
