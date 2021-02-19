@@ -1,8 +1,6 @@
-![Mirror Logo](https://i.imgur.com/we6li1x.png)
-
 [![Documentation](https://img.shields.io/badge/documentation-brightgreen.svg)](https://miragenet.github.io/Mirage/)
 [![Forum](https://img.shields.io/badge/forum-brightgreen.svg)](https://forum.unity.com/threads/mirror-networking-for-unity-aka-hlapi-community-edition.425437/)
-[![Discord](https://img.shields.io/discord/343440455738064897.svg)](https://discordapp.com/invite/DTBPBYvexy)
+[![Discord](https://img.shields.io/discord/343440455738064897.svg)]()
 [![release](https://img.shields.io/github/release/MirageNet/FizzySteamyMirror.svg)](https://github.com/MirageNet/FizzySteamyMirror/releases/latest)
 [![openupm](https://img.shields.io/npm/v/com.miragenet.steamy?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.miragenet.steamy/)
 [![GitHub issues](https://img.shields.io/github/issues/MirageNet/FizzySteamyMirror.svg)](https://github.com/MirageNet/FizzySteamyMirror/issues)
@@ -18,7 +16,7 @@ Dependencies
 Both of these projects need to be installed and working before you can use this transport.
 
     SteamWorks.NET SteamyNG relies on Steamworks.NET to communicate with the Steamworks API. Requires .Net 4.x
-    Mirror FizzySteamworks is also obviously dependant on MirrorNG which is a streamline, bug fixed, maintained version of UNET for Unity.
+    Mirror FizzySteamworks is also obviously dependant on Mirage which is a streamline, bug fixed, maintained version of UNET for Unity.
     
 FizzySteam is only for 64bit version. If you require 32bit you will need to find the dlls yourself.
 
