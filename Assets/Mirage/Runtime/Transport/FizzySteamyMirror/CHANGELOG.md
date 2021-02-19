@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.1...v1.0.2) (2021-02-19)
+
+
+### Bug Fixes
+
+* pacakge min version ([318545b](https://github.com/MirageNet/FizzySteamyMirror/commit/318545b5fbcef58c43ffd94dbdd5711a583dc29e))
+
 ## [1.0.1](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.0...v1.0.1) (2021-02-18)
 
 
