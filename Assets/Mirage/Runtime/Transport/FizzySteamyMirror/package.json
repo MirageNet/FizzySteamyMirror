@@ -1,6 +1,6 @@
 {
     "name": "com.miragenet.steamy",
-    "displayName": "Mirage SteamyNG",
+    "displayName": "Mirage Steamy",
     "version": "1.0.4",
     "unity": "2020.1",
     "description": "Steam transport for Mirage using Steamworks.net",
