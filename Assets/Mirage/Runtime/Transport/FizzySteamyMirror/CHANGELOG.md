@@ -1,3 +1,11 @@
+## [1.0.4](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.3...v1.0.4) (2021-03-12)
+
+
+### Bug Fixes
+
+* Missing meta data for changelog error fixed. ([9c018c6](https://github.com/MirageNet/FizzySteamyMirror/commit/9c018c6308ab274894144c8162668809652bf045))
+* readme ([bc4027a](https://github.com/MirageNet/FizzySteamyMirror/commit/bc4027a84f04ad8b19333fcdc8821027296647ac))
+
 ## [1.0.3](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.2...v1.0.3) (2021-02-19)
 
 
