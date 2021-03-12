@@ -267,9 +267,9 @@ namespace Mirage.FizzySteam
         /// <param name="data">The data we want to send.</param>
         /// <param name="channel">The channel we want to send it on.</param>
         /// <returns></returns>
-        public UniTask SendAsync(ArraySegment<byte> data, int channel)
+        public void Send(ArraySegment<byte> data, int channel)
         {
-            if (!Connected) return UniTask.CompletedTask;
+            if (!Connected) return;
 
             _clientSendPoolData = new byte[data.Count];
 
@@ -277,7 +277,7 @@ namespace Mirage.FizzySteam
 
             Send(Options.ConnectionAddress, _clientSendPoolData, channel);
 
-            return UniTask.CompletedTask;
+            return;
         }
 
         #endregion
