@@ -3,7 +3,7 @@
     "displayName": "Mirage SteamyNG",
     "version": "1.0.3",
     "unity": "2020.1",
-    "description": "Steam transport for Mirage",
+    "description": "Steam transport for Mirage using Steamworks.net",
     "author": "Mirage",
     "repository": {
         "type": "git",
