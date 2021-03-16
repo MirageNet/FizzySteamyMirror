@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.4...v2.0.0) (2021-03-16)
+
+
+### Bug Fixes
+
+* use Mirage.Logging namespace for LogFactory ([b79eef8](https://github.com/MirageNet/FizzySteamyMirror/commit/b79eef8dc538f24e5fbbd5fff62db743651187ab))
+
+
+### BREAKING CHANGES
+
+* Requires Mirage 80.0.0+
+
 ## [1.0.4](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.3...v1.0.4) (2021-03-12)
 
 
