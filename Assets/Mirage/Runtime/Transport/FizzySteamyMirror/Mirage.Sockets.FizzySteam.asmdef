@@ -1,0 +1,23 @@
+{
+    "name": "Mirage.Sockets.FizzySteam",
+    "rootNamespace": "FizzySteam",
+    "references": [
+        "GUID:c0b2064c294eb174c9f3f7da398eb677"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "LinuxStandalone64",
+        "macOSStandalone",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        ""
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

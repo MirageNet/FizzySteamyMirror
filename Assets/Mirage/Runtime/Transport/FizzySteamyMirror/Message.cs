@@ -1,24 +1,16 @@
-﻿#region Statements
+using System.Net;
 
-using Steamworks;
-
-#endregion
-
-namespace Mirage.FizzySteam
+namespace Mirage.Sockets.FizzySteam
 {
     public struct Message
     {
-        public readonly CSteamID steamId;
-        public readonly InternalMessages eventType;
-        public readonly byte[] data;
-        public int Channel;
+        public byte[] Data;
+        public EndPoint Endpoint;
 
-        public Message(CSteamID steamId, InternalMessages eventType, byte[] data, int channel)
+        public Message(byte[] data, EndPoint endPoint)
         {
-            this.steamId = steamId;
-            this.eventType = eventType;
-            this.data = data;
-            this.Channel = channel;
+            Data = data;
+            Endpoint = endPoint;
         }
     }
 }
