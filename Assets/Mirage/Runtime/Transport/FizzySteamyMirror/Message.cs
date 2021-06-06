@@ -1,4 +1,5 @@
 using System.Net;
+using Steamworks;
 
 namespace Mirage.Sockets.FizzySteam
 {

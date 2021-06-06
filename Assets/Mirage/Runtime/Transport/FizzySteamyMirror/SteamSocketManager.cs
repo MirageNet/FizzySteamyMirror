@@ -15,6 +15,16 @@ using Debug = UnityEngine.Debug;
 
 namespace Mirage.Sockets.FizzySteam
 {
+    public class SteamEndpoint : EndPoint
+    {
+        public CSteamID Address;
+
+        public override string ToString()
+        {
+            return Address.ToString();
+        }
+    }
+
     internal sealed class SteamSocketManager : IDisposable
     {
         #region Fields
@@ -27,6 +37,7 @@ namespace Mirage.Sockets.FizzySteam
         private readonly bool _isServer;
         public readonly ConcurrentQueue<Message> BufferQueue = new ConcurrentQueue<Message>();
         private readonly SteamOptions _steamOptions;
+        private bool _steamInitialized;
 
         #endregion
 
@@ -60,12 +71,15 @@ namespace Mirage.Sockets.FizzySteam
 
         public bool Update()
         {
+            if (!_steamInitialized) return false;
+
             SteamAPI.RunCallbacks();
 
             var receivedMessages = new IntPtr[_steamOptions.MaxMessagesPolling];
             int receivedCount;
 
-            if ((receivedCount = SteamNetworkingSockets.ReceiveMessagesOnPollGroup(_pollGroup, receivedMessages, _steamOptions.MaxMessagesPolling)) > 0)
+            if ((receivedCount = SteamNetworkingSockets.ReceiveMessagesOnPollGroup(_pollGroup, receivedMessages,
+                _steamOptions.MaxMessagesPolling)) > 0)
             {
                 for (int i = 0; i < receivedCount; i++)
                 {
@@ -80,10 +94,11 @@ namespace Mirage.Sockets.FizzySteam
 
                     Marshal.Copy(steamMessage.m_pData, message.Data, 0, steamMessage.m_cbSize);
 
-                    if (_steamOptions.EnableDebug)
-                        LogDebug($"Queuing up messages to buffer. Current Message queue: {BufferQueue.Count}");
-
                     BufferQueue.Enqueue(message);
+
+                    if (_steamOptions.EnableDebug)
+                        LogDebug(
+                            $"Steam back-end queuing up messages to buffer. Current Message queue: {BufferQueue.Count}");
 
                     NativeMethods.SteamAPI_SteamNetworkingMessage_t_Release(receivedMessages[i]);
                     Marshal.DestroyStructure<SteamNetworkingMessage_t>(receivedMessages[i]);
@@ -102,6 +117,7 @@ namespace Mirage.Sockets.FizzySteam
                     return pair.Key;
                 }
             }
+
             return default;
         }
 
@@ -114,8 +130,10 @@ namespace Mirage.Sockets.FizzySteam
         {
             _steamOptions = options;
             _isServer = isServer;
-            _onConnectionChange = Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnConnectionStatusChanged);
+            _onConnectionChange =
+                Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnConnectionStatusChanged);
             SteamConnections = new Dictionary<EndPoint, HSteamNetConnection>();
+            _steamInitialized = true;
         }
 
         /// <summary>
@@ -153,7 +171,12 @@ namespace Mirage.Sockets.FizzySteam
                             SteamNetworkingSockets.SetConnectionPollGroup(param.m_hConn, _pollGroup);
                             SteamNetworkingSockets.AcceptConnection(param.m_hConn);
 
-                            SteamConnections.Add(new IPEndPoint(param.m_hConn.m_HSteamNetConnection, 0), param.m_hConn);
+                            var steamEndpoint = new SteamEndpoint
+                            {
+                                Address = param.m_info.m_identityRemote.GetSteamID()
+                            };
+
+                            SteamConnections.Add(steamEndpoint, param.m_hConn);
 
                             if (_steamOptions.EnableDebug)
                                 LogDebug(
@@ -196,7 +219,7 @@ namespace Mirage.Sockets.FizzySteam
 
                             if (SteamConnections.ContainsValue(param.m_hConn))
                             {
-                                if(_steamOptions.EnableDebug)
+                                if (_steamOptions.EnableDebug)
                                     LogDebug("Found connection in dictionary. Removing connection.");
 
                                 SteamConnections.Remove(FindKeyByValue(SteamConnections, param.m_hConn));
@@ -225,8 +248,9 @@ namespace Mirage.Sockets.FizzySteam
                 LogDebug("Shutting down socket manager.");
 
             _onConnectionChange = null;
-            SteamAPI.Shutdown();
             SteamNetworkingSockets.DestroyPollGroup(_pollGroup);
+            _steamInitialized = false;
+            SteamAPI.Shutdown();
         }
 
         #endregion
@@ -250,7 +274,8 @@ namespace Mirage.Sockets.FizzySteam
 
             if (!initialized)
             {
-                Debug.LogError("[Steamworks.NET] SteamAPI_Init() failed. Refer to Valve's documentation or the comment above this line for more information.");
+                Debug.LogError(
+                    "[Steamworks.NET] SteamAPI_Init() failed. Refer to Valve's documentation or the comment above this line for more information.");
 
                 return;
             }
@@ -276,7 +301,8 @@ namespace Mirage.Sockets.FizzySteam
             switch (_steamOptions.SteamMode)
             {
                 case SteamModes.P2P:
-                    _steamSocketManager.Socket = SteamNetworkingSockets.CreateListenSocketP2P(0, 0, new SteamNetworkingConfigValue_t[0]);
+                    _steamSocketManager.Socket =
+                        SteamNetworkingSockets.CreateListenSocketP2P(0, 0, new SteamNetworkingConfigValue_t[0]);
                     break;
                 case SteamModes.SDR:
                     break;
@@ -287,10 +313,13 @@ namespace Mirage.Sockets.FizzySteam
                     var address = new SteamNetworkingIPAddr();
                     address.SetIPv6(ipEndPoint.Address.GetAddressBytes(), (ushort)ipEndPoint.Port);
 
-                    _steamSocketManager.Socket = SteamNetworkingSockets.CreateListenSocketIP(ref address, 0, new SteamNetworkingConfigValue_t[0]);
+                    _steamSocketManager.Socket =
+                        SteamNetworkingSockets.CreateListenSocketIP(ref address, 0,
+                            new SteamNetworkingConfigValue_t[0]);
                     break;
                 default:
-                    _steamSocketManager.LogDebug("Unknown steam mode. Please check if mode has been supported.", LogType.Warning);
+                    _steamSocketManager.LogDebug("Unknown steam mode. Please check if mode has been supported.",
+                        LogType.Warning);
                     break;
             }
         }
@@ -304,10 +333,10 @@ namespace Mirage.Sockets.FizzySteam
             switch (_steamOptions.SteamMode)
             {
                 case SteamModes.P2P:
-                    var hostSteamId = new CSteamID(ulong.Parse(_steamOptions.Address));
 
+                    var steamEndPoint = (SteamEndpoint)endPoint;
                     var steamIdentity = new SteamNetworkingIdentity();
-                    steamIdentity.SetSteamID(hostSteamId);
+                    steamIdentity.SetSteamID(steamEndPoint.Address);
 
                     SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, new SteamNetworkingConfigValue_t[0]);
                     break;
@@ -320,7 +349,9 @@ namespace Mirage.Sockets.FizzySteam
                     var address = new SteamNetworkingIPAddr();
                     address.SetIPv6(ipEndPoint.Address.GetAddressBytes(), (ushort)ipEndPoint.Port);
 
-                    _steamSocketManager.HoHSteamNetConnection = SteamNetworkingSockets.ConnectByIPAddress(ref address, 0, new SteamNetworkingConfigValue_t[0]);
+                    _steamSocketManager.HoHSteamNetConnection =
+                        SteamNetworkingSockets.ConnectByIPAddress(ref address, 0,
+                            new SteamNetworkingConfigValue_t[0]);
 
                     _steamSocketManager.SteamConnections.Add(endPoint, _steamSocketManager.HoHSteamNetConnection);
                     break;
@@ -382,7 +413,7 @@ namespace Mirage.Sockets.FizzySteam
 
             if (_steamOptions.EnableDebug)
                 _steamSocketManager.LogDebug(
-                    $"Message Received From : {endPoint} Successfully. Message: {BitConverter.ToString(buffer)}");
+                    $"Message Received From : {endPoint} Successfully. Steamsockets stats BufferQueue: {_steamSocketManager.BufferQueue.Count} Message: {BitConverter.ToString(buffer)}");
 
             return message.Data.Length;
         }
