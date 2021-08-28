@@ -76,9 +76,9 @@ namespace Mirage.Sockets.FizzySteam
         }
 
         /// <summary>Creates the <see cref="EndPoint" /> that the Server Socket will bind to</summary>
-        public override EndPoint GetBindEndPoint()
+        public override IEndPoint GetBindEndPoint()
         {
-            return new IPEndPoint(IPAddress.IPv6Any, _steamOptions.Port);
+            return new SteamEndPointWrapper(new IPEndPoint(IPAddress.IPv6Any, _steamOptions.Port));
         }
 
         /// <summary>Creates a <see cref="ISocket" /> to be used by <see cref="Peer" /> on the client</summary>
@@ -91,14 +91,48 @@ namespace Mirage.Sockets.FizzySteam
         }
 
         /// <summary>Creates the <see cref="EndPoint" /> that the Client Socket will connect to using the parameter given</summary>
-        public override EndPoint GetConnectEndPoint(string address = null, ushort? port = null)
+        public override IEndPoint GetConnectEndPoint(string address = null, ushort? port = null)
         {
             string addressString = address ?? _steamOptions.Address;
             IPAddress ipAddress = GetAddress(addressString);
 
             ushort portIn = port ?? _steamOptions.Port;
 
-            return new IPEndPoint(ipAddress, portIn);
+            return new SteamEndPointWrapper(new IPEndPoint(ipAddress, portIn));
+        }
+
+        public struct SteamEndPointWrapper : IEndPoint
+        {
+            public EndPoint inner;
+
+            public SteamEndPointWrapper(EndPoint endPoint)
+            {
+                inner = endPoint;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is SteamEndPointWrapper other)
+                {
+                    return inner.Equals(other.inner);
+                }
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return inner.GetHashCode();
+            }
+
+            public override string ToString()
+            {
+                return inner.ToString();
+            }
+
+            IEndPoint IEndPoint.CreateCopy()
+            {
+                return new SteamEndPointWrapper(inner);
+            }
         }
 
         #endregion

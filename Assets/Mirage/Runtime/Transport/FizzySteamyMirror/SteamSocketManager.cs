@@ -15,13 +15,47 @@ using Debug = UnityEngine.Debug;
 
 namespace Mirage.Sockets.FizzySteam
 {
-    public class SteamEndpoint : EndPoint
+    public class SteamEndpoint : IEndPoint, IEquatable<SteamEndpoint>
     {
         public CSteamID Address;
+
+        /// <summary>Indicates whether the current object is equal to another object of the same type.</summary>
+        /// <param name="other">An object to compare with this object.</param>
+        /// <returns>
+        /// <see langword="true" /> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <see langword="false" />.</returns>
+        public bool Equals(SteamEndpoint other)
+        {
+            return Address == other.Address;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is SteamEndpoint endPoint)
+            {
+                return Address == endPoint.Address;
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Address.GetHashCode();
+        }
 
         public override string ToString()
         {
             return Address.ToString();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="IEndPoint"/> with same connection data
+        /// <para>this is called when a new connection is created by <see cref="Peer"/></para>
+        /// </summary>
+        /// <returns></returns>
+        public IEndPoint CreateCopy()
+        {
+            return new SteamEndpoint();
         }
     }
 
@@ -31,7 +65,7 @@ namespace Mirage.Sockets.FizzySteam
 
         public HSteamListenSocket Socket;
         public HSteamNetConnection HoHSteamNetConnection;
-        public readonly Dictionary<EndPoint, HSteamNetConnection> SteamConnections;
+        public readonly Dictionary<IEndPoint, HSteamNetConnection> SteamConnections;
         private readonly HSteamNetPollGroup _pollGroup = SteamNetworkingSockets.CreatePollGroup();
         private Callback<SteamNetConnectionStatusChangedCallback_t> _onConnectionChange = null;
         private readonly bool _isServer;
@@ -132,7 +166,7 @@ namespace Mirage.Sockets.FizzySteam
             _isServer = isServer;
             _onConnectionChange =
                 Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnConnectionStatusChanged);
-            SteamConnections = new Dictionary<EndPoint, HSteamNetConnection>();
+            SteamConnections = new Dictionary<IEndPoint, HSteamNetConnection>();
             _steamInitialized = true;
         }
 
@@ -296,7 +330,7 @@ namespace Mirage.Sockets.FizzySteam
         /// <para>Used by Server to allow clients to connect</para>
         /// </summary>
         /// <param name="endPoint">the endpoint to listen on</param>
-        public void Bind(EndPoint endPoint)
+        public void Bind(IEndPoint endPoint)
         {
             switch (_steamOptions.SteamMode)
             {
@@ -328,7 +362,7 @@ namespace Mirage.Sockets.FizzySteam
         /// Sets up Socket ready to send data to endpoint as a client
         /// </summary>
         /// <param name="endPoint"></param>
-        public void Connect(EndPoint endPoint)
+        public void Connect(IEndPoint endPoint)
         {
             switch (_steamOptions.SteamMode)
             {
@@ -403,7 +437,7 @@ namespace Mirage.Sockets.FizzySteam
         /// <param name="buffer">buffer to write recevived packet into</param>
         /// <param name="endPoint">where packet came from</param>
         /// <returns>length of packet, should not be above <paramref name="buffer"/> length</returns>
-        public int Receive(byte[] buffer, out EndPoint endPoint)
+        public int Receive(byte[] buffer, out IEndPoint endPoint)
         {
             _steamSocketManager.BufferQueue.TryDequeue(out Message message);
 
@@ -425,7 +459,7 @@ namespace Mirage.Sockets.FizzySteam
         /// <param name="endPoint">where packet is being sent to</param>
         /// <param name="packet">buffer that contains the packet, starting at index 0</param>
         /// <param name="length">length of the packet</param>
-        public unsafe void Send(EndPoint endPoint, byte[] packet, int length)
+        public unsafe void Send(IEndPoint endPoint, byte[] packet, int length)
         {
             fixed (byte* ptr = packet)
             {
