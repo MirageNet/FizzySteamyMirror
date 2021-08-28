@@ -1,13 +1,13 @@
-using System.Net;
+using Mirage.SocketLayer;
 
 namespace Mirage.Sockets.FizzySteam
 {
     public struct Message
     {
         public byte[] Data;
-        public EndPoint Endpoint;
+        public IEndPoint Endpoint;
 
-        public Message(byte[] data, EndPoint endPoint)
+        public Message(byte[] data, IEndPoint endPoint)
         {
             Data = data;
             Endpoint = endPoint;
