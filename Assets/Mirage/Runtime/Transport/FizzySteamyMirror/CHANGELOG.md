@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.0...v2.0.1) (2021-08-28)
+
+
+### Bug Fixes
+
+* forgot change mirage version requirements. ([9316945](https://github.com/MirageNet/FizzySteamyMirror/commit/9316945b13de00d1eed0cda31dde97379d299753))
+
 # [2.0.0](https://github.com/MirageNet/FizzySteamyMirror/compare/v1.0.4...v2.0.0) (2021-03-16)
 
 
