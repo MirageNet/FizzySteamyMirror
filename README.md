@@ -1,5 +1,5 @@
 [![Documentation](https://img.shields.io/badge/documentation-brightgreen.svg)](https://miragenet.github.io/Mirage/)
-[![Discord](https://img.shields.io/discord/343440455738064897.svg)]()
+[![Discord](https://img.shields.io/discord/809535064551456888.svg)](https://discordapp.com/invite/DTBPBYvexy)
 [![release](https://img.shields.io/github/release/MirageNet/FizzySteamyMirror.svg)](https://github.com/MirageNet/FizzySteamyMirror/releases/latest)
 [![openupm](https://img.shields.io/npm/v/com.miragenet.steamy?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.miragenet.steamy/)
 [![GitHub issues](https://img.shields.io/github/issues/MirageNet/FizzySteamyMirror.svg)](https://github.com/MirageNet/FizzySteamyMirror/issues)
