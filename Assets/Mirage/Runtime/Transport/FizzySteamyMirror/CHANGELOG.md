@@ -1,3 +1,14 @@
+## [2.0.2](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.1...v2.0.2) (2021-12-10)
+
+
+### Bug Fixes
+
+* for json file still messing up. ([437b2de](https://github.com/MirageNet/FizzySteamyMirror/commit/437b2de48ff6d61b4117f4441264b5b5c387bf0b))
+* json again ([3cf545c](https://github.com/MirageNet/FizzySteamyMirror/commit/3cf545ce478b3f28f8ffb67a7674bea0cbde6b44))
+* made it so steamworks.net is pulled directly from there github using package manager. ([bfd4375](https://github.com/MirageNet/FizzySteamyMirror/commit/bfd437500375f3b4ca2fe75f79d28cab416acf41))
+* missed a , for new dependency. ([3c2e89f](https://github.com/MirageNet/FizzySteamyMirror/commit/3c2e89f719d88c6dabfa783e98acda8e954bfd91))
+* releasing message. ([088da7f](https://github.com/MirageNet/FizzySteamyMirror/commit/088da7f77612c577343111e566de25e0715208f2))
+
 ## [2.0.1](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.0...v2.0.1) (2021-08-28)
 
 
