@@ -12,6 +12,6 @@
     "dependencies": {
         "com.cysharp.unitask": "2.0.36",
         "com.miragenet.mirage": "100.0.0",
-		"com.rlabrecque.steamworks.net": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net",
-    },
+		"com.rlabrecque.steamworks.net": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net"
+    }
 }
