@@ -134,7 +134,7 @@ namespace Mirage.Sockets.FizzySteam
                         LogDebug(
                             $"Steam back-end queuing up messages to buffer. Current Message queue: {BufferQueue.Count}");
 
-                    NativeMethods.SteamAPI_SteamNetworkingMessage_t_Release(receivedMessages[i]);
+                    steamMessage.Release();
                     Marshal.DestroyStructure<SteamNetworkingMessage_t>(receivedMessages[i]);
                 }
             }
