@@ -8,15 +8,15 @@
 
 [![Build](https://github.com/MirageNet/FizzySteamyMirror/workflows/CI/badge.svg)](https://github.com/MirageNet/FizzySteamyMirror/actions?query=workflow%3ACI)
 
-SteamyNG
+SteamyMirage
 
-SteamyNG brings together Steam and Mirage utilising Async of a Steam P2P network transport layer for Mirage.
+SteamyMirage brings together Steam and Mirage utilising Async of a Steam P2P network transport layer for Mirage.
 Dependencies
 
 Both of these projects need to be installed and working before you can use this transport.
 
-    SteamWorks.NET SteamyNG relies on Steamworks.NET to communicate with the Steamworks API. Requires .Net 4.x
-    Mirror FizzySteamworks is also obviously dependant on Mirage which is a streamline, bug fixed, maintained version of UNET for Unity.
+    SteamWorks.NET SteamyMirage relies on Steamworks.NET to communicate with the Steamworks API. Requires .Net 4.x
+    Mirage FizzySteamworks is also obviously dependant on Mirage.
     
 FizzySteam is only for 64bit version. If you require 32bit you will need to find the dlls yourself.
 
@@ -30,7 +30,7 @@ If you are using unity 2019.3 or later:
 3) Click on Windows -> Package Manager
 4) Click on the plus sign on the left and click on "Add package from git URL..."
 5) enter https://github.com/MirageNet/FizzySteamyMirror.git?path=/Assets/Mirage/Runtime/Transport/FizzySteamyMirror
-6) Unity will download and install Mirage SteamyNG
+6) Unity will download and install Mirage SteamyMirage
 
 Note: The default 480(Spacewar) appid is a very grey area, technically, it's not allowed but they don't really do anything about it. When you have your own appid from steam then replace the 480 with your own game appid. If you know a better way around this please make a Issue ticket.
 Host
@@ -47,6 +47,6 @@ Before sending your game to your buddy make sure you have your steamID64 ready.
 
 Testing your game locally
 
-You cant connect to yourself locally while using SteamyNG since it's using steams P2P. If you want to test your game locally you'll have to use "Telepathy Transport" instead of "SteamyNG".
+You cant connect to yourself locally while using SteamyMirage since it's using steams P2P. If you want to test your game locally you'll have to use "UDP Transport" instead of "SteamyMirage".
 
 Thanks to all developers of the original code for this work. I have just made it work for MirrorNG the original creators deserve the thanks
