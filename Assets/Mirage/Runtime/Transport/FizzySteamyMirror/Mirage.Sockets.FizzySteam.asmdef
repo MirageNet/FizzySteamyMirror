@@ -2,7 +2,8 @@
     "name": "Mirage.Sockets.FizzySteam",
     "rootNamespace": "FizzySteam",
     "references": [
-        "GUID:c0b2064c294eb174c9f3f7da398eb677"
+        "GUID:c0b2064c294eb174c9f3f7da398eb677",
+        "GUID:68bd7fdb68ef2684e982e8a9825b18a5"
     ],
     "includePlatforms": [
         "Editor",

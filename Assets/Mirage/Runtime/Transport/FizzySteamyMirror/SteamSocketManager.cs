@@ -336,7 +336,7 @@ namespace Mirage.Sockets.FizzySteam
             {
                 case SteamModes.P2P:
                     _steamSocketManager.Socket =
-                        SteamNetworkingSockets.CreateListenSocketP2P(0, 0, new SteamNetworkingConfigValue_t[0]);
+                        SteamNetworkingSockets.CreateListenSocketP2P(0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
                     break;
                 case SteamModes.SDR:
                     break;
@@ -349,7 +349,7 @@ namespace Mirage.Sockets.FizzySteam
 
                     _steamSocketManager.Socket =
                         SteamNetworkingSockets.CreateListenSocketIP(ref address, 0,
-                            new SteamNetworkingConfigValue_t[0]);
+                            Array.Empty<SteamNetworkingConfigValue_t>());
                     break;
                 default:
                     _steamSocketManager.LogDebug("Unknown steam mode. Please check if mode has been supported.",
@@ -372,7 +372,7 @@ namespace Mirage.Sockets.FizzySteam
                     var steamIdentity = new SteamNetworkingIdentity();
                     steamIdentity.SetSteamID(steamEndPoint.Address);
 
-                    SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, new SteamNetworkingConfigValue_t[0]);
+                    SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
                     break;
                 case SteamModes.SDR:
                     break;
@@ -385,7 +385,7 @@ namespace Mirage.Sockets.FizzySteam
 
                     _steamSocketManager.HoHSteamNetConnection =
                         SteamNetworkingSockets.ConnectByIPAddress(ref address, 0,
-                            new SteamNetworkingConfigValue_t[0]);
+                            Array.Empty<SteamNetworkingConfigValue_t>());
 
                     _steamSocketManager.SteamConnections.Add(endPoint, _steamSocketManager.HoHSteamNetConnection);
                     break;
