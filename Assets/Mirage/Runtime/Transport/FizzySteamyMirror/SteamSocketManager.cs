@@ -114,9 +114,8 @@ namespace Mirage.Sockets.FizzySteam
 
         public bool Update()
         {
-            if (!_steamInitialized) return false;
-
-            SteamAPI.RunCallbacks();
+            if (_steamInitialized)
+                SteamAPI.RunCallbacks();
 
             var receivedMessages = new IntPtr[_steamOptions.MaxMessagesPolling];
             int receivedCount;
@@ -143,7 +142,6 @@ namespace Mirage.Sockets.FizzySteam
                             $"Steam back-end queuing up messages to buffer. Current Message queue: {BufferQueue.Count}");
 
                     SteamNetworkingMessage_t.Release(receivedMessages[i]);
-                    //Marshal.DestroyStructure<SteamNetworkingMessage_t>(receivedMessages[i]);
                 }
             }
 
