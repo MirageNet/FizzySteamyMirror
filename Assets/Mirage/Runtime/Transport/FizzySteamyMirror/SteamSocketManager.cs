@@ -19,7 +19,7 @@ namespace Mirage.Sockets.FizzySteam
 
     public class SteamEndpoint : IEndPoint, IEquatable<SteamEndpoint>
     {
-        public CSteamID Address;
+        public readonly CSteamID Address;
 
         public SteamEndpoint(CSteamID address)
         {
