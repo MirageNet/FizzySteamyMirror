@@ -15,6 +15,8 @@ namespace Mirage.Sockets.FizzySteam
         [Tooltip("Enter address of the ip of server connect to or the steam user id to if in p2p mode.")] public string Address = "localhost";
         [Tooltip("Only used in udp mode.")] public ushort Port = 7777;
         [Range(1,512), Tooltip("Number of messages we want to poll steam for at once time.")] public int MaxMessagesPolling = 256;
+        [Tooltip("Set this to false if you want to initialize the SteamClient yourself.")]
+        public bool InitSteam = true;
     }
 
     public enum SteamModes : byte
