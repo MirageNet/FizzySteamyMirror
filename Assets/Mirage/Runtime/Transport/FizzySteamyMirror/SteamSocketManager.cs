@@ -350,7 +350,7 @@ namespace Mirage.Sockets.FizzySteam
                         SteamNetworkingSockets.CreateListenSocketP2P(0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
                     break;
                 case SteamModes.SDR:
-                    break;
+                    throw new NotImplementedException("Still not implemented yet.");
                 case SteamModes.UDP:
 
                     _endPoint = (SteamSocketFactory.SteamEndPointWrapper)endPoint;
@@ -386,7 +386,7 @@ namespace Mirage.Sockets.FizzySteam
                     SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
                     break;
                 case SteamModes.SDR:
-                    break;
+                    throw new NotImplementedException("Still not implemented yet.");
                 case SteamModes.UDP:
 
                     _endPoint = (SteamSocketFactory.SteamEndPointWrapper)endPoint;
