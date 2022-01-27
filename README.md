@@ -22,7 +22,7 @@ FizzySteam is only for 64bit version. If you require 32bit you will need to find
 ## Installation
 The preferred installation method is Unity Package manager.
 
-If you are using unity 2019.3 or later: 
+If you are using unity 2020.3 or later: 
 
 1) Open your project in unity
 2) Install [Mirage](https://github.com/MirageNet/Mirage)
@@ -43,9 +43,5 @@ Before sending your game to your buddy make sure you have your steamID64 ready.
     Your buddy needs your steamID64 to be able to connect.
     Place the steamID64 into "localhost" then click "Client"
     Then they will be connected to you.
-
-Testing your game locally
-
-You cant connect to yourself locally while using SteamyMirage since it's using steams P2P. If you want to test your game locally you'll have to use "UDP Transport" instead of "SteamyMirage".
 
 Thanks to all developers of the original code for this work. I have just made it work for MirrorNG the original creators deserve the thanks
