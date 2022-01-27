@@ -9,7 +9,7 @@
 
 SteamyMirage
 
-SteamyMirage brings together Steam and Mirage utilising Async of a Steam P2P network transport layer for Mirage.
+SteamyMirage brings together Steam and Mirage utilising Async of a Steam P2P or UDP network transport layer for Mirage.
 Dependencies
 
 Both of these projects need to be installed and working before you can use this transport.
