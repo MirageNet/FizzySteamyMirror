@@ -1,3 +1,5 @@
+#if !DISABLESTEAMWORKS
+
 #region Statements
 
 using System;
@@ -15,7 +17,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Mirage.Sockets.FizzySteam
 {
-    #region Endpoint Wrappers
+#region Endpoint Wrappers
 
     public class SteamEndpoint : IEndPoint, IEquatable<SteamEndpoint>
     {
@@ -66,11 +68,11 @@ namespace Mirage.Sockets.FizzySteam
         }
     }
 
-    #endregion
+#endregion
 
     internal sealed class SteamSocketManager : IDisposable
     {
-        #region Fields
+#region Fields
 
         public HSteamListenSocket Socket;
         public HSteamNetConnection HoHSteamNetConnection;
@@ -82,9 +84,9 @@ namespace Mirage.Sockets.FizzySteam
         private readonly SteamOptions _steamOptions;
         private bool _steamInitialized;
 
-        #endregion
+#endregion
 
-        #region Class Methods
+#region Class Methods
 
         /// <summary>
         /// 
@@ -276,9 +278,9 @@ namespace Mirage.Sockets.FizzySteam
             }
         }
 
-        #endregion
+#endregion
 
-        #region Implementation of IDisposable
+#region Implementation of IDisposable
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
         public void Dispose()
@@ -292,21 +294,21 @@ namespace Mirage.Sockets.FizzySteam
             SteamAPI.Shutdown();
         }
 
-        #endregion
+#endregion
     }
 
     internal sealed class SteamSocket : ISocket
     {
-        #region Fields
+#region Fields
 
         private readonly bool _isServer;
         private readonly SteamOptions _steamOptions;
         private readonly SteamSocketManager _steamSocketManager;
         private SteamSocketFactory.SteamEndPointWrapper _endPoint;
 
-        #endregion
+#endregion
 
-        #region Class Specific
+#region Class Specific
 
         public SteamSocket(SteamOptions options, bool isServer)
         {
@@ -330,9 +332,9 @@ namespace Mirage.Sockets.FizzySteam
             _steamSocketManager = new SteamSocketManager(options, isServer);
         }
 
-        #endregion
+#endregion
 
-        #region Implementation of ISocket
+#region Implementation of ISocket
 
         /// <summary>
         /// Starts listens for data on an endpoint
@@ -496,6 +498,7 @@ namespace Mirage.Sockets.FizzySteam
             }
         }
 
-        #endregion
+#endregion
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if !DISABLESTEAMWORKS
 #region Statements
 
 using System;
@@ -142,3 +143,4 @@ namespace Mirage.Sockets.FizzySteam
         #endregion
     }
 }
+#endif

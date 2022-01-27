@@ -1,3 +1,4 @@
+#if !DISABLESTEAMWORKS
 #region Statements
 
 using System;
@@ -26,3 +27,4 @@ namespace Mirage.Sockets.FizzySteam
         SDR = 2
     }
 }
+#endif
