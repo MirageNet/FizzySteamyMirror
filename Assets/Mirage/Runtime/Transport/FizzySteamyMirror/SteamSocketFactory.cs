@@ -5,6 +5,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using Mirage.SocketLayer;
+using Steamworks;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -96,6 +97,9 @@ namespace Mirage.Sockets.FizzySteam
         /// <summary>Creates the <see cref="EndPoint" /> that the Client Socket will connect to using the parameter given</summary>
         public override IEndPoint GetConnectEndPoint(string address = null, ushort? port = null)
         {
+            if (SteamOptions.SteamMode == SteamModes.P2P)
+                return new SteamEndpoint(new CSteamID(ulong.Parse(address ?? SteamOptions.Address)));
+
             string addressString = address ?? SteamOptions.Address;
             IPAddress ipAddress = GetAddress(addressString);
 

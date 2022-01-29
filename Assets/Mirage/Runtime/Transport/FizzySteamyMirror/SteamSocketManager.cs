@@ -17,7 +17,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Mirage.Sockets.FizzySteam
 {
-#region Endpoint Wrappers
+    #region Endpoint Wrappers
 
     public class SteamEndpoint : IEndPoint, IEquatable<SteamEndpoint>
     {
@@ -68,11 +68,11 @@ namespace Mirage.Sockets.FizzySteam
         }
     }
 
-#endregion
+    #endregion
 
     internal sealed class SteamSocketManager : IDisposable
     {
-#region Fields
+        #region Fields
 
         public HSteamListenSocket Socket;
         public HSteamNetConnection HoHSteamNetConnection;
@@ -84,9 +84,9 @@ namespace Mirage.Sockets.FizzySteam
         private readonly SteamOptions _steamOptions;
         private bool _steamInitialized;
 
-#endregion
+        #endregion
 
-#region Class Methods
+        #region Class Methods
 
         /// <summary>
         /// 
@@ -278,9 +278,9 @@ namespace Mirage.Sockets.FizzySteam
             }
         }
 
-#endregion
+        #endregion
 
-#region Implementation of IDisposable
+        #region Implementation of IDisposable
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
         public void Dispose()
@@ -294,26 +294,32 @@ namespace Mirage.Sockets.FizzySteam
             SteamAPI.Shutdown();
         }
 
-#endregion
+        #endregion
     }
 
     internal sealed class SteamSocket : ISocket
     {
-#region Fields
+        #region Fields
 
         private readonly bool _isServer;
         private readonly SteamOptions _steamOptions;
         private readonly SteamSocketManager _steamSocketManager;
         private SteamSocketFactory.SteamEndPointWrapper _endPoint;
 
-#endregion
+        #endregion
 
-#region Class Specific
+        #region Class Specific
 
         public SteamSocket(SteamOptions options, bool isServer)
         {
             if (options.InitSteam)
             {
+                if (SteamAPI.RestartAppIfNecessary((AppId_t)480))
+                {
+                    Application.Quit();
+                    return;
+                }
+
                 bool initialized = SteamAPI.Init();
 
                 if (!initialized)
@@ -327,14 +333,17 @@ namespace Mirage.Sockets.FizzySteam
 
             Debug.Log("Starting up FizzySteam Socket...");
 
+            if(options.useSteamRelay)
+                SteamNetworkingUtils.InitRelayNetworkAccess();
+
             _steamOptions = options;
             _isServer = isServer;
             _steamSocketManager = new SteamSocketManager(options, isServer);
         }
 
-#endregion
+        #endregion
 
-#region Implementation of ISocket
+        #region Implementation of ISocket
 
         /// <summary>
         /// Starts listens for data on an endpoint
@@ -349,8 +358,6 @@ namespace Mirage.Sockets.FizzySteam
                     _steamSocketManager.Socket =
                         SteamNetworkingSockets.CreateListenSocketP2P(0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
                     break;
-                case SteamModes.SDR:
-                    throw new NotImplementedException("Still not implemented yet.");
                 case SteamModes.UDP:
 
                     _endPoint = (SteamSocketFactory.SteamEndPointWrapper)endPoint;
@@ -363,9 +370,9 @@ namespace Mirage.Sockets.FizzySteam
                             Array.Empty<SteamNetworkingConfigValue_t>());
                     break;
                 default:
-                    _steamSocketManager.LogDebug("Unknown steam mode. Please check if mode has been supported.",
-                        LogType.Warning);
-                    break;
+                    _steamSocketManager.LogDebug("Unknown steam mode. Please check if mode has been supported.", LogType.Warning);
+
+                    throw new NotImplementedException("Unknown steam mode. This mode must not be implemented fully yet.");
             }
         }
 
@@ -383,10 +390,10 @@ namespace Mirage.Sockets.FizzySteam
                     var steamIdentity = new SteamNetworkingIdentity();
                     steamIdentity.SetSteamID(steamEndPoint.Address);
 
-                    SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
+                    _steamSocketManager.HoHSteamNetConnection = SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
+
+                    _steamSocketManager.SteamConnections.TryAdd(steamEndPoint, _steamSocketManager.HoHSteamNetConnection);
                     break;
-                case SteamModes.SDR:
-                    throw new NotImplementedException("Still not implemented yet.");
                 case SteamModes.UDP:
 
                     _endPoint = (SteamSocketFactory.SteamEndPointWrapper)endPoint;
@@ -398,7 +405,7 @@ namespace Mirage.Sockets.FizzySteam
                         SteamNetworkingSockets.ConnectByIPAddress(ref address, 0,
                             Array.Empty<SteamNetworkingConfigValue_t>());
 
-                    _steamSocketManager.SteamConnections.Add(endPoint, _steamSocketManager.HoHSteamNetConnection);
+                    _steamSocketManager.SteamConnections.Add(_endPoint, _steamSocketManager.HoHSteamNetConnection);
                     break;
                 default:
                     Debug.LogWarning("Unknown steam mode. Please check if mode has been supported.");
@@ -498,7 +505,7 @@ namespace Mirage.Sockets.FizzySteam
             }
         }
 
-#endregion
+        #endregion
     }
 }
 #endif
