@@ -392,7 +392,7 @@ namespace Mirage.Sockets.FizzySteam
 
                     _steamSocketManager.HoHSteamNetConnection = SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
 
-                    _steamSocketManager.SteamConnections.TryAdd(steamEndPoint, _steamSocketManager.HoHSteamNetConnection);
+                    _steamSocketManager.SteamConnections.Add(steamEndPoint, _steamSocketManager.HoHSteamNetConnection);
                     break;
                 case SteamModes.UDP:
 
