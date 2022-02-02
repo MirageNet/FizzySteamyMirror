@@ -1,3 +1,5 @@
+#if !DISABLESTEAMWORKS
+
 using Mirage.SocketLayer;
 
 namespace Mirage.Sockets.FizzySteam
@@ -14,3 +16,4 @@ namespace Mirage.Sockets.FizzySteam
         }
     }
 }
+#endif

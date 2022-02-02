@@ -1,10 +1,13 @@
+#if !DISABLESTEAMWORKS
 #region Statements
 
 using System;
 using System.Net;
 using System.Net.Sockets;
 using Mirage.SocketLayer;
+using Steamworks;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 #endregion
 
@@ -14,7 +17,7 @@ namespace Mirage.Sockets.FizzySteam
     {
         #region Fields
 
-        [SerializeField] private SteamOptions _steamOptions;
+        [FormerlySerializedAs("_steamOptions")] public SteamOptions SteamOptions = new SteamOptions();
 
         #endregion
 
@@ -54,6 +57,7 @@ namespace Mirage.Sockets.FizzySteam
             }
 
             IPAddress[] results = Dns.GetHostAddresses(addressString);
+
             if (results.Length == 0)
             {
                 throw new SocketException((int)SocketError.HostNotFound);
@@ -72,13 +76,13 @@ namespace Mirage.Sockets.FizzySteam
         {
             ThrowIfNotSupported();
 
-            return new SteamSocket(_steamOptions, true);
+            return new SteamSocket(SteamOptions, true);
         }
 
         /// <summary>Creates the <see cref="EndPoint" /> that the Server Socket will bind to</summary>
         public override IEndPoint GetBindEndPoint()
         {
-            return new SteamEndPointWrapper(new IPEndPoint(IPAddress.IPv6Any, _steamOptions.Port));
+            return new SteamEndPointWrapper(new IPEndPoint(IPAddress.IPv6Any, SteamOptions.Port));
         }
 
         /// <summary>Creates a <see cref="ISocket" /> to be used by <see cref="Peer" /> on the client</summary>
@@ -87,21 +91,24 @@ namespace Mirage.Sockets.FizzySteam
         {
             ThrowIfNotSupported();
 
-            return new SteamSocket(_steamOptions, false);
+            return new SteamSocket(SteamOptions, false);
         }
 
         /// <summary>Creates the <see cref="EndPoint" /> that the Client Socket will connect to using the parameter given</summary>
         public override IEndPoint GetConnectEndPoint(string address = null, ushort? port = null)
         {
-            string addressString = address ?? _steamOptions.Address;
+            if (SteamOptions.SteamMode == SteamModes.P2P)
+                return new SteamEndpoint(new CSteamID(ulong.Parse(address ?? SteamOptions.Address)));
+
+            string addressString = address ?? SteamOptions.Address;
             IPAddress ipAddress = GetAddress(addressString);
 
-            ushort portIn = port ?? _steamOptions.Port;
+            ushort portIn = port ?? SteamOptions.Port;
 
             return new SteamEndPointWrapper(new IPEndPoint(ipAddress, portIn));
         }
 
-        public struct SteamEndPointWrapper : IEndPoint
+        public class SteamEndPointWrapper : IEndPoint
         {
             public EndPoint inner;
 
@@ -131,10 +138,13 @@ namespace Mirage.Sockets.FizzySteam
 
             IEndPoint IEndPoint.CreateCopy()
             {
-                return new SteamEndPointWrapper(inner);
+                // copy the inner endpoint
+                EndPoint copy = inner.Create(inner.Serialize());
+                return new SteamEndPointWrapper(copy);
             }
         }
 
         #endregion
     }
 }
+#endif
