@@ -291,8 +291,8 @@ namespace Mirage.Sockets.FizzySteam
             _onConnectionChange = null;
             SteamNetworkingSockets.DestroyPollGroup(_pollGroup);
             _steamInitialized = false;
-            
-            if(options.InitSteam)
+
+            if (_steamOptions.InitSteam)
                 SteamAPI.Shutdown();
         }
 
