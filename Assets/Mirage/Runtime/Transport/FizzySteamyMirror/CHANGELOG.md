@@ -1,3 +1,10 @@
+## [2.0.3](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.2...v2.0.3) (2022-02-02)
+
+
+### Bug Fixes
+
+* This fixes all issues with udp and p2p. ([#3](https://github.com/MirageNet/FizzySteamyMirror/issues/3)) ([2a26bcb](https://github.com/MirageNet/FizzySteamyMirror/commit/2a26bcb27c53d5afc2170d08c98d18e6de7debc0))
+
 ## [2.0.2](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.1...v2.0.2) (2021-12-10)
 
 
