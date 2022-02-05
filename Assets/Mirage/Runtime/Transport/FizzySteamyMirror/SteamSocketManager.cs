@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Mirage.SocketLayer;
 using Steamworks;
 using UnityEngine;
@@ -225,6 +226,10 @@ namespace Mirage.Sockets.FizzySteam
 
                             break;
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ClosedByPeer:
+                        case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
+
+                            SteamNetworkingSockets.CloseConnection(param.m_hConn, param.m_info.m_eEndReason,
+                                param.m_info.m_szEndDebug, false);
 
                             if (SteamConnections.ContainsValue(param.m_hConn))
                                 SteamConnections.Remove(FindKeyByValue(SteamConnections, param.m_hConn));
@@ -233,6 +238,7 @@ namespace Mirage.Sockets.FizzySteam
                                 LogDebug($"Connection closed by peer: {clientSteamId}");
 
                             break;
+
                         default:
 
                             if (_steamOptions.EnableDebug)
@@ -418,7 +424,7 @@ namespace Mirage.Sockets.FizzySteam
         /// <summary>
         /// Closes the socket, stops receiving messages from other peers
         /// </summary>
-        public void Close()
+        public async void Close()
         {
             switch (_isServer)
             {
@@ -426,9 +432,21 @@ namespace Mirage.Sockets.FizzySteam
                     SteamNetworkingSockets.CloseListenSocket(_steamSocketManager.Socket);
                     break;
                 case false:
-                    SteamNetworkingSockets.CloseConnection(_steamSocketManager.HoHSteamNetConnection,
-                        (int)ESteamNetConnectionEnd.k_ESteamNetConnectionEnd_App_Generic, null, true);
+
+                    // Thx to Refeas for this helps better disconnection.
+                    byte[] data = new byte[3];
+                    data[0] = (byte)PacketType.Command;
+                    data[1] = (byte)Commands.Disconnect;
+                    data[2] = (byte)DisconnectReason.RequestedByRemotePeer;
+
+                    Send(_endPoint, data, data.Length);
+
                     SteamNetworkingSockets.FlushMessagesOnConnection(_steamSocketManager.HoHSteamNetConnection);
+
+                    await Task.Delay(10);
+
+                    SteamNetworkingSockets.CloseConnection(_steamSocketManager.HoHSteamNetConnection,
+                        (int)ESteamNetConnectionEnd.k_ESteamNetConnectionEnd_App_Generic, null, false);
                     break;
             }
 
