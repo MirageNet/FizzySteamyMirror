@@ -1,3 +1,10 @@
+## [2.0.6](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.5...v2.0.6) (2022-02-06)
+
+
+### Bug Fixes
+
+* forgot to move the shutdown code for deinitialisation ([b3ba34d](https://github.com/MirageNet/FizzySteamyMirror/commit/b3ba34d015d911b3cc2cb8cc37e507295a78d273))
+
 ## [2.0.5](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.4...v2.0.5) (2022-02-06)
 
 
