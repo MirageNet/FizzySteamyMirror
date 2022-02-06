@@ -1,3 +1,10 @@
+## [2.0.5](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.4...v2.0.5) (2022-02-06)
+
+
+### Bug Fixes
+
+* This allows to not run callbacks if end user wants to take control. ([f922da4](https://github.com/MirageNet/FizzySteamyMirror/commit/f922da4e9becf856494b2ffc06a01b8362b1e45b))
+
 ## [2.0.4](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.3...v2.0.4) (2022-02-05)
 
 
