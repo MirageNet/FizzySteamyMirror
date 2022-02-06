@@ -18,6 +18,39 @@ namespace Mirage.Sockets.FizzySteam
         #region Fields
 
         [FormerlySerializedAs("_steamOptions")] public SteamOptions SteamOptions = new SteamOptions();
+        [NonSerialized] public bool SteamInitialized;
+
+        #endregion
+
+        #region Unity Methods
+
+        private void Start()
+        {
+            if (SteamOptions.InitSteam)
+            {
+                if (SteamAPI.RestartAppIfNecessary((AppId_t)480))
+                {
+                    Application.Quit();
+                    return;
+                }
+
+                SteamInitialized = SteamAPI.Init();
+
+                if (!SteamInitialized)
+                {
+                    Debug.LogError(
+                        "[Steamworks.NET] SteamAPI_Init() failed. Refer to Valve's documentation or the comment above this line for more information.");
+
+                    return;
+                }
+            }
+        }
+
+        private void Update()
+        {
+            if (SteamOptions.ControlCallbackRunning && SteamInitialized)
+                SteamAPI.RunCallbacks();
+        }
 
         #endregion
 

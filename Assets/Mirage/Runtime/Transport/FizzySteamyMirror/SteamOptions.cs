@@ -25,6 +25,9 @@ namespace Mirage.Sockets.FizzySteam
         [Tooltip("Set this to false if you want to initialize the SteamClient yourself.")]
         public bool InitSteam = true;
 
+        [Tooltip("Should steam sockets control callback functionality.?")]
+        public bool ControlCallbackRunning = true;
+
         [Header("Debug Options")]
 
         [Tooltip("Enable Debug Mode")]

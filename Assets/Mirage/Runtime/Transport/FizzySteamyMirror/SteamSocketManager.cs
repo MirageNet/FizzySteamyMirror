@@ -83,7 +83,6 @@ namespace Mirage.Sockets.FizzySteam
         private readonly bool _isServer;
         public readonly ConcurrentQueue<Message> BufferQueue = new ConcurrentQueue<Message>();
         private readonly SteamOptions _steamOptions;
-        private bool _steamInitialized;
 
         #endregion
 
@@ -117,9 +116,6 @@ namespace Mirage.Sockets.FizzySteam
 
         public bool Update()
         {
-            if (_steamInitialized)
-                SteamAPI.RunCallbacks();
-
             var receivedMessages = new IntPtr[_steamOptions.MaxMessagesPolling];
             int receivedCount;
 
@@ -178,8 +174,6 @@ namespace Mirage.Sockets.FizzySteam
                     Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnConnectionStatusChanged);
 
             SteamConnections = new Dictionary<IEndPoint, HSteamNetConnection>();
-
-            _steamInitialized = options.InitSteam;
         }
 
         /// <summary>
@@ -296,7 +290,6 @@ namespace Mirage.Sockets.FizzySteam
 
             _onConnectionChange = null;
             SteamNetworkingSockets.DestroyPollGroup(_pollGroup);
-            _steamInitialized = false;
 
             if (_steamOptions.InitSteam)
                 SteamAPI.Shutdown();
@@ -320,25 +313,6 @@ namespace Mirage.Sockets.FizzySteam
 
         public SteamSocket(SteamOptions options, bool isServer)
         {
-            if (options.InitSteam)
-            {
-                if (SteamAPI.RestartAppIfNecessary((AppId_t)480))
-                {
-                    Application.Quit();
-                    return;
-                }
-
-                bool initialized = SteamAPI.Init();
-
-                if (!initialized)
-                {
-                    Debug.LogError(
-                        "[Steamworks.NET] SteamAPI_Init() failed. Refer to Valve's documentation or the comment above this line for more information.");
-
-                    return;
-                }
-            }
-
             Debug.Log("Starting up FizzySteam Socket...");
 
             if(options.useSteamRelay)
