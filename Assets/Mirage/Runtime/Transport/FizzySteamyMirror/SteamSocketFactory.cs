@@ -46,6 +46,12 @@ namespace Mirage.Sockets.FizzySteam
             }
         }
 
+        private void OnDestroy()
+        {
+            if (SteamInitialized && SteamOptions.InitSteam)
+                SteamAPI.Shutdown();
+        }
+
         private void Update()
         {
             if (SteamOptions.ControlCallbackRunning && SteamInitialized)

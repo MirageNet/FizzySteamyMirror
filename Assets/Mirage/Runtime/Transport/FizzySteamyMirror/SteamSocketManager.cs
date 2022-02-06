@@ -290,9 +290,6 @@ namespace Mirage.Sockets.FizzySteam
 
             _onConnectionChange = null;
             SteamNetworkingSockets.DestroyPollGroup(_pollGroup);
-
-            if (_steamOptions.InitSteam)
-                SteamAPI.Shutdown();
         }
 
         #endregion
