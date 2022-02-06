@@ -1,3 +1,10 @@
+## [2.0.4](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.3...v2.0.4) (2022-02-05)
+
+
+### Bug Fixes
+
+* implemented better disconnection ([8de67eb](https://github.com/MirageNet/FizzySteamyMirror/commit/8de67ebabd97fcbc5e696ebc15af958e30ae9fb3))
+
 ## [2.0.3](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.2...v2.0.3) (2022-02-02)
 
 
