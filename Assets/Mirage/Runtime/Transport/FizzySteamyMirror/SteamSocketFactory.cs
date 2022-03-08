@@ -20,6 +20,8 @@ namespace Mirage.Sockets.FizzySteam
         [FormerlySerializedAs("_steamOptions")] public SteamOptions SteamOptions = new SteamOptions();
         [NonSerialized] public bool SteamInitialized;
 
+        public Action OnSteamInitialized;
+
         #endregion
 
         #region Unity Methods
@@ -28,7 +30,7 @@ namespace Mirage.Sockets.FizzySteam
         {
             if (SteamOptions.InitSteam)
             {
-                if (SteamAPI.RestartAppIfNecessary((AppId_t)480))
+                if (SteamAPI.RestartAppIfNecessary((AppId_t)SteamOptions.AppID))
                 {
                     Application.Quit();
                     return;
@@ -43,13 +45,17 @@ namespace Mirage.Sockets.FizzySteam
 
                     return;
                 }
+
+                OnSteamInitialized?.Invoke();
             }
         }
 
         private void OnDestroy()
         {
             if (SteamInitialized && SteamOptions.InitSteam)
+            {
                 SteamAPI.Shutdown();
+            }
         }
 
         private void Update()
