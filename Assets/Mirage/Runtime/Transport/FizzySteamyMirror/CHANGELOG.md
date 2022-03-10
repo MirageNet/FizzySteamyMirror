@@ -1,3 +1,10 @@
+## [2.0.7](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.6...v2.0.7) (2022-03-08)
+
+
+### Bug Fixes
+
+* fixed not using Appid parameter in initialization of steam and added new event for initialization of steam. ([fbe9171](https://github.com/MirageNet/FizzySteamyMirror/commit/fbe9171008c693474537044dfd849a73ca0f82e8))
+
 ## [2.0.6](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.5...v2.0.6) (2022-02-06)
 
 
