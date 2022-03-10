@@ -1,3 +1,10 @@
+## [2.0.9](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.8...v2.0.9) (2022-03-10)
+
+
+### Bug Fixes
+
+* moved invoke of event up so return does not interfere with it ([b951d32](https://github.com/MirageNet/FizzySteamyMirror/commit/b951d325b66f86e72227641f5e12d435bacc14e2))
+
 ## [2.0.8](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.7...v2.0.8) (2022-03-10)
 
 
