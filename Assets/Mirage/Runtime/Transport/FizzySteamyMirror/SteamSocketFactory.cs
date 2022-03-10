@@ -38,6 +38,8 @@ namespace Mirage.Sockets.FizzySteam
 
                 SteamInitialized = SteamAPI.Init();
 
+                OnSteamInitialized?.Invoke(SteamInitialized);
+
                 if (!SteamInitialized)
                 {
                     Debug.LogError(
@@ -45,8 +47,6 @@ namespace Mirage.Sockets.FizzySteam
 
                     return;
                 }
-
-                OnSteamInitialized?.Invoke(SteamInitialized);
             }
         }
 
