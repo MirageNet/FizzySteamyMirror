@@ -20,7 +20,7 @@ namespace Mirage.Sockets.FizzySteam
         [FormerlySerializedAs("_steamOptions")] public SteamOptions SteamOptions = new SteamOptions();
         [NonSerialized] public bool SteamInitialized;
 
-        public Action OnSteamInitialized;
+        public Action<bool> OnSteamInitialized;
 
         #endregion
 
@@ -46,7 +46,7 @@ namespace Mirage.Sockets.FizzySteam
                     return;
                 }
 
-                OnSteamInitialized?.Invoke();
+                OnSteamInitialized?.Invoke(SteamInitialized);
             }
         }
 
