@@ -1,3 +1,10 @@
+## [2.0.8](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.7...v2.0.8) (2022-03-10)
+
+
+### Bug Fixes
+
+* added bool to initialize event. ([c6b1acf](https://github.com/MirageNet/FizzySteamyMirror/commit/c6b1acfa3a46cf8b355da4c88c7746d2131faf83))
+
 ## [2.0.7](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.6...v2.0.7) (2022-03-08)
 
 
