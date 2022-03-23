@@ -30,23 +30,7 @@ namespace Mirage.Sockets.FizzySteam
         {
             if (SteamOptions.InitSteam)
             {
-                if (SteamAPI.RestartAppIfNecessary((AppId_t)SteamOptions.AppID))
-                {
-                    Application.Quit();
-                    return;
-                }
-
-                SteamInitialized = SteamAPI.Init();
-
-                OnSteamInitialized?.Invoke(SteamInitialized);
-
-                if (!SteamInitialized)
-                {
-                    Debug.LogError(
-                        "[Steamworks.NET] SteamAPI_Init() failed. Refer to Valve's documentation or the comment above this line for more information.");
-
-                    return;
-                }
+                Init();
             }
         }
 
@@ -67,6 +51,36 @@ namespace Mirage.Sockets.FizzySteam
         #endregion
 
         #region Class Methods
+
+        /// <summary>
+        /// Initializes the Steam API.
+        /// </summary>
+        /// <returns>Returns true if initialization was successful. False if already initialized or the initialization could not be completed.</returns>
+        public bool Init()
+        {
+            if(SteamInitialized)
+                return false;
+
+            if (SteamAPI.RestartAppIfNecessary((AppId_t)SteamOptions.AppID))
+            {
+                Application.Quit();
+                return false;
+            }
+
+            SteamInitialized = SteamAPI.Init();
+
+            OnSteamInitialized?.Invoke(SteamInitialized);
+
+            if (!SteamInitialized)
+            {
+                Debug.LogError(
+                    "[Steamworks.NET] SteamAPI_Init() failed. Refer to Valve's documentation or the comment above this line for more information.");
+
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         ///     Check against specific devices to make sure we support it.
