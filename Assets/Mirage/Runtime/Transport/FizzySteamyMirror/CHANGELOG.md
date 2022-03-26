@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.9...v2.1.0) (2022-03-26)
+
+
+### Features
+
+* Update to newest mirage. This might be a BREAKING CHANGE I hard coded the max mtu to be 1200. Steam uses 1200 for unreliable messages. I know with reliable it can do 1mb and it auto breaks it for you. If this becomes issue post on issue tracker. ([220391a](https://github.com/MirageNet/FizzySteamyMirror/commit/220391aaed88288f85c2beff9a2a0729a946c763)), closes [Gornhoth#0551](https://github.com/Gornhoth/issues/0551)
+
 ## [2.0.9](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.8...v2.0.9) (2022-03-10)
 
 
