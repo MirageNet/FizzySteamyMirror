@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.0...v2.1.1) (2022-03-26)
+
+
+### Bug Fixes
+
+* named samples folder wrong. ([ffad57b](https://github.com/MirageNet/FizzySteamyMirror/commit/ffad57bbb74d06c2bc075faa3fc39163c1434535))
+
 # [2.1.0](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.0.9...v2.1.0) (2022-03-26)
 
 
