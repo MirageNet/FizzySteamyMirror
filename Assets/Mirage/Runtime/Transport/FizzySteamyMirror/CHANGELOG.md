@@ -1,3 +1,10 @@
+## [2.1.2](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.1...v2.1.2) (2022-03-27)
+
+
+### Bug Fixes
+
+* attempt fix dependcy issues ([c31b370](https://github.com/MirageNet/FizzySteamyMirror/commit/c31b37080ed192fb4ba46a6c53d5ee83e4b561d8))
+
 ## [2.1.1](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.0...v2.1.1) (2022-03-26)
 
 
