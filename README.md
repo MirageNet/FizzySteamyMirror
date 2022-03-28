@@ -29,7 +29,7 @@ If you are using unity 2020.3 or later:
 3) Install [Steamworks.net](https://steamworks.github.io/installation)
 4) Click on Windows -> Package Manager
 5) Click on the plus sign on the left and click on "Add package from git URL..."
-6) enter https://github.com/MirageNet/FizzySteamyMirror.git?path=/Assets/Mirage/Runtime/Transport/FizzySteamyMirror
+6) enter https://github.com/MirageNet/FizzySteamyMirage.git?path=/Assets/Mirage/Runtime/Transport/FizzySteamyMirage
 7) Unity will download and install Mirage SteamyMirage
 
 Note: The default 480(Spacewar) appid is a very grey area, technically, it's not allowed but they don't really do anything about it. When you have your own appid from steam then replace the 480 with your own game appid. If you know a better way around this please make a Issue ticket.
@@ -45,4 +45,4 @@ Before sending your game to your buddy make sure you have your steamID64 ready.
     Place the steamID64 into "localhost" then click "Client"
     Then they will be connected to you.
 
-Thanks to all developers of the original code for this work. I have just made it work for MirrorNG the original creators deserve the thanks
+Thanks to all developers of the original code for this work. I have just made it work for Mirage the original creators deserve the thanks
