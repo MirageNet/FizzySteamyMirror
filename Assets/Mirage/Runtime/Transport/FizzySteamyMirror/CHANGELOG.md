@@ -1,3 +1,10 @@
+## [2.1.3](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.2...v2.1.3) (2022-03-28)
+
+
+### Bug Fixes
+
+* removed depency for steamworks.net ([2634236](https://github.com/MirageNet/FizzySteamyMirror/commit/263423670ea21e7e50773dbdf35d9f0e68da485b))
+
 ## [2.1.2](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.1...v2.1.2) (2022-03-27)
 
 
