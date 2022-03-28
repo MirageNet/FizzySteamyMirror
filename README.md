@@ -26,10 +26,11 @@ If you are using unity 2020.3 or later:
 
 1) Open your project in unity
 2) Install [Mirage](https://github.com/MirageNet/Mirage)
-3) Click on Windows -> Package Manager
-4) Click on the plus sign on the left and click on "Add package from git URL..."
-5) enter https://github.com/MirageNet/FizzySteamyMirror.git?path=/Assets/Mirage/Runtime/Transport/FizzySteamyMirror
-6) Unity will download and install Mirage SteamyMirage
+3) Install [Steamworks.net](https://steamworks.github.io/installation)
+4) Click on Windows -> Package Manager
+5) Click on the plus sign on the left and click on "Add package from git URL..."
+6) enter https://github.com/MirageNet/FizzySteamyMirror.git?path=/Assets/Mirage/Runtime/Transport/FizzySteamyMirror
+7) Unity will download and install Mirage SteamyMirage
 
 Note: The default 480(Spacewar) appid is a very grey area, technically, it's not allowed but they don't really do anything about it. When you have your own appid from steam then replace the 480 with your own game appid. If you know a better way around this please make a Issue ticket.
 Host
