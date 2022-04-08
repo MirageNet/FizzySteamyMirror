@@ -290,6 +290,7 @@ namespace Mirage.Sockets.FizzySteam
 
             _onConnectionChange = null;
             SteamNetworkingSockets.DestroyPollGroup(_pollGroup);
+            SteamConnections.Clear();
         }
 
         #endregion
@@ -401,6 +402,7 @@ namespace Mirage.Sockets.FizzySteam
             {
                 case true:
                     SteamNetworkingSockets.CloseListenSocket(_steamSocketManager.Socket);
+
                     break;
                 case false:
 
