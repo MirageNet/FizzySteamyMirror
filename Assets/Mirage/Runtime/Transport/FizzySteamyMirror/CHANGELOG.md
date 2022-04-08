@@ -1,3 +1,10 @@
+## [2.1.4](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.3...v2.1.4) (2022-04-08)
+
+
+### Bug Fixes
+
+* clearing dictionary when socket closes. This should fix null issues for host and non host in p2p. ([3ea4e90](https://github.com/MirageNet/FizzySteamyMirror/commit/3ea4e900e8149acd51d5b632e9022820fc0c1922))
+
 ## [2.1.3](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.2...v2.1.3) (2022-03-28)
 
 
