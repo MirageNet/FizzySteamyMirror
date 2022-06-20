@@ -1,3 +1,10 @@
+## [2.1.5](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.4...v2.1.5) (2022-06-20)
+
+
+### Bug Fixes
+
+* Activate new build. ([e78cf69](https://github.com/MirageNet/FizzySteamyMirror/commit/e78cf69ec1b85f05cde6264c200f2de2d68ebff3))
+
 ## [2.1.4](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.3...v2.1.4) (2022-04-08)
 
 
