@@ -1,3 +1,10 @@
+## [2.1.6](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.5...v2.1.6) (2022-08-01)
+
+
+### Bug Fixes
+
+* Potential fix for hanging disconnects. There is a connection state none which I was not using and could be a limbo state from steam. ([8d9dc8b](https://github.com/MirageNet/FizzySteamyMirror/commit/8d9dc8b4f457f59967c633a7a34fb80255747bc0))
+
 ## [2.1.5](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.4...v2.1.5) (2022-06-20)
 
 
