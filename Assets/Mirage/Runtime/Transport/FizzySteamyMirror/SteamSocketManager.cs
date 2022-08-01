@@ -221,6 +221,7 @@ namespace Mirage.Sockets.FizzySteam
                             break;
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ClosedByPeer:
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
+                        case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_None:
 
                             SteamNetworkingSockets.CloseConnection(param.m_hConn, param.m_info.m_eEndReason,
                                 param.m_info.m_szEndDebug, false);
