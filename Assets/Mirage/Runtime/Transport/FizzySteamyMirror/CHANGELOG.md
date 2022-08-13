@@ -1,3 +1,10 @@
+## [2.1.7](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.6...v2.1.7) (2022-08-13)
+
+
+### Bug Fixes
+
+* replace existing connections if they exist ([#5](https://github.com/MirageNet/FizzySteamyMirror/issues/5)) ([a919bf3](https://github.com/MirageNet/FizzySteamyMirror/commit/a919bf35153da5efa6c5ddf4ceb3f995044fbb30))
+
 ## [2.1.6](https://github.com/MirageNet/FizzySteamyMirror/compare/v2.1.5...v2.1.6) (2022-08-01)
 
 
