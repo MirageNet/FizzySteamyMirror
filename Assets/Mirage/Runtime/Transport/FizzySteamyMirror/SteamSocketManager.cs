@@ -212,6 +212,15 @@ namespace Mirage.Sockets.FizzySteam
 
                             var steamEndpoint = new SteamEndpoint(param.m_info.m_identityRemote.GetSteamID());
 
+                            if (SteamConnections.ContainsKey(steamEndpoint))
+                            {
+                                if (_steamOptions.EnableDebug)
+                                {
+                                    LogDebug($"Connection {steamEndpoint} already exists. Removing old entry.");
+                                }
+                                SteamConnections.Remove(steamEndpoint);
+                            }
+
                             SteamConnections.Add(steamEndpoint, param.m_hConn);
 
                             if (_steamOptions.EnableDebug)
@@ -372,6 +381,15 @@ namespace Mirage.Sockets.FizzySteam
 
                     _steamSocketManager.HoHSteamNetConnection = SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
 
+                    if (_steamSocketManager.SteamConnections.ContainsKey(steamEndPoint))
+                    {
+                        if (_steamOptions.EnableDebug)
+                        {
+                            _steamSocketManager.LogDebug("Connection already exists, removing the old one.");
+                        }
+                        _steamSocketManager.SteamConnections.Remove(steamEndPoint);
+                    }
+                    
                     _steamSocketManager.SteamConnections.Add(steamEndPoint, _steamSocketManager.HoHSteamNetConnection);
 
                     _endPoint = endPoint;
