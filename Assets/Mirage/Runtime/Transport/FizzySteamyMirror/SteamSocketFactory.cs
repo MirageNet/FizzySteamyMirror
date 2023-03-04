@@ -87,11 +87,13 @@ namespace Mirage.Sockets.FizzySteam
         /// </summary>
         private bool IsSteam => Application.platform == RuntimePlatform.LinuxEditor ||
                                 Application.platform == RuntimePlatform.LinuxPlayer ||
+                                Application.platform == RuntimePlatform.LinuxServer ||
                                 Application.platform == RuntimePlatform.WindowsPlayer ||
                                 Application.platform == RuntimePlatform.WindowsEditor ||
+                                Application.platform == RuntimePlatform.WindowsServer ||
                                 Application.platform == RuntimePlatform.OSXPlayer ||
-                                Application.platform == RuntimePlatform.OSXEditor;
-
+                                Application.platform == RuntimePlatform.OSXEditor ||
+                                Application.platform == RuntimePlatform.OSXServer;
         /// <summary>
         ///     Make sure device is supported.
         /// </summary>

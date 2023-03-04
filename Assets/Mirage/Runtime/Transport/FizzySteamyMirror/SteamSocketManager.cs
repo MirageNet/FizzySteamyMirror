@@ -14,7 +14,18 @@ using Steamworks;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
+
+#if UNITY_SERVER
+using steamSockets = Steamworks.SteamGameServerNetworkingSockets;
+using networkingUtils = Steamworks.SteamGameServerNetworkingUtils;
+
+#else
+using steamSockets = Steamworks.SteamNetworkingSockets;
+using networkingUtils = Steamworks.SteamNetworkingUtils;
+#endif
+
 #endregion
+
 
 namespace Mirage.Sockets.FizzySteam
 {
@@ -78,7 +89,7 @@ namespace Mirage.Sockets.FizzySteam
         public HSteamListenSocket Socket;
         public HSteamNetConnection HoHSteamNetConnection;
         public readonly Dictionary<IEndPoint, HSteamNetConnection> SteamConnections;
-        private readonly HSteamNetPollGroup _pollGroup = SteamNetworkingSockets.CreatePollGroup();
+        private readonly HSteamNetPollGroup _pollGroup = steamSockets.CreatePollGroup();
         private Callback<SteamNetConnectionStatusChangedCallback_t> _onConnectionChange = null;
         private readonly bool _isServer;
         public readonly ConcurrentQueue<Message> BufferQueue = new ConcurrentQueue<Message>();
@@ -110,7 +121,6 @@ namespace Mirage.Sockets.FizzySteam
                 default:
                     Debug.LogException(new Exception($"<color=red> {message} </color>"));
                     break;
-
             }
         }
 
@@ -119,8 +129,8 @@ namespace Mirage.Sockets.FizzySteam
             var receivedMessages = new IntPtr[_steamOptions.MaxMessagesPolling];
             int receivedCount;
 
-            if ((receivedCount = SteamNetworkingSockets.ReceiveMessagesOnPollGroup(_pollGroup, receivedMessages,
-                _steamOptions.MaxMessagesPolling)) > 0)
+            if ((receivedCount = steamSockets.ReceiveMessagesOnPollGroup(_pollGroup, receivedMessages,
+                    _steamOptions.MaxMessagesPolling)) > 0)
             {
                 for (int i = 0; i < receivedCount; i++)
                 {
@@ -171,7 +181,7 @@ namespace Mirage.Sockets.FizzySteam
             _isServer = isServer;
 
             _onConnectionChange =
-                    Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnConnectionStatusChanged);
+                Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnConnectionStatusChanged);
 
             SteamConnections = new Dictionary<IEndPoint, HSteamNetConnection>();
         }
@@ -193,7 +203,7 @@ namespace Mirage.Sockets.FizzySteam
 
                             EResult reason;
 
-                            if ((reason = SteamNetworkingSockets.AcceptConnection(param.m_hConn)) ==
+                            if ((reason = steamSockets.AcceptConnection(param.m_hConn)) ==
                                 EResult.k_EResultOK)
                             {
                                 if (_steamOptions.EnableDebug)
@@ -208,7 +218,7 @@ namespace Mirage.Sockets.FizzySteam
                             break;
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connected:
 
-                            SteamNetworkingSockets.SetConnectionPollGroup(param.m_hConn, _pollGroup);
+                            steamSockets.SetConnectionPollGroup(param.m_hConn, _pollGroup);
 
                             var steamEndpoint = new SteamEndpoint(param.m_info.m_identityRemote.GetSteamID());
 
@@ -218,6 +228,7 @@ namespace Mirage.Sockets.FizzySteam
                                 {
                                     LogDebug($"Connection {steamEndpoint} already exists. Removing old entry.");
                                 }
+
                                 SteamConnections.Remove(steamEndpoint);
                             }
 
@@ -232,7 +243,7 @@ namespace Mirage.Sockets.FizzySteam
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_None:
 
-                            SteamNetworkingSockets.CloseConnection(param.m_hConn, param.m_info.m_eEndReason,
+                            steamSockets.CloseConnection(param.m_hConn, param.m_info.m_eEndReason,
                                 param.m_info.m_szEndDebug, false);
 
                             if (SteamConnections.ContainsValue(param.m_hConn))
@@ -257,10 +268,11 @@ namespace Mirage.Sockets.FizzySteam
                     {
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connected:
 
-                            SteamNetworkingSockets.SetConnectionPollGroup(HoHSteamNetConnection, _pollGroup);
+                            steamSockets.SetConnectionPollGroup(HoHSteamNetConnection, _pollGroup);
 
                             if (_steamOptions.EnableDebug)
-                                LogDebug($"Connection state changed: {param.m_info.m_eState} for peer: {HoHSteamNetConnection}");
+                                LogDebug(
+                                    $"Connection state changed: {param.m_info.m_eState} for peer: {HoHSteamNetConnection}");
 
                             break;
                         case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ClosedByPeer:
@@ -298,7 +310,9 @@ namespace Mirage.Sockets.FizzySteam
                 LogDebug("Shutting down socket manager.");
 
             _onConnectionChange = null;
-            SteamNetworkingSockets.DestroyPollGroup(_pollGroup);
+
+            steamSockets.DestroyPollGroup(_pollGroup);
+
             SteamConnections.Clear();
         }
 
@@ -322,8 +336,12 @@ namespace Mirage.Sockets.FizzySteam
         {
             Debug.Log("Starting up FizzySteam Socket...");
 
-            if(options.useSteamRelay)
-                SteamNetworkingUtils.InitRelayNetworkAccess();
+            if (options.useSteamRelay)
+            {
+
+                networkingUtils.InitRelayNetworkAccess();
+            }
+
 
             _steamOptions = options;
             _isServer = isServer;
@@ -344,24 +362,35 @@ namespace Mirage.Sockets.FizzySteam
             switch (_steamOptions.SteamMode)
             {
                 case SteamModes.P2P:
-                    _steamSocketManager.Socket =
-                        SteamNetworkingSockets.CreateListenSocketP2P(0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
+
+
+                    _steamSocketManager.Socket = steamSockets.CreateListenSocketP2P(0, 0,
+                        Array.Empty<SteamNetworkingConfigValue_t>());
+
+
                     break;
                 case SteamModes.UDP:
 
                     _endPoint = (SteamSocketFactory.SteamEndPointWrapper)endPoint;
 
                     var address = new SteamNetworkingIPAddr();
-                    address.SetIPv6(((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Address.GetAddressBytes(), (ushort)((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Port);
+                    address.SetIPv6(
+                        ((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Address
+                        .GetAddressBytes(),
+                        (ushort)((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Port);
 
-                    _steamSocketManager.Socket =
-                        SteamNetworkingSockets.CreateListenSocketIP(ref address, 0,
-                            Array.Empty<SteamNetworkingConfigValue_t>());
+
+                    _steamSocketManager.Socket = steamSockets.CreateListenSocketIP(ref address, 0,
+                        Array.Empty<SteamNetworkingConfigValue_t>());
+
+
                     break;
                 default:
-                    _steamSocketManager.LogDebug("Unknown steam mode. Please check if mode has been supported.", LogType.Warning);
+                    _steamSocketManager.LogDebug("Unknown steam mode. Please check if mode has been supported.",
+                        LogType.Warning);
 
-                    throw new NotImplementedException("Unknown steam mode. This mode must not be implemented fully yet.");
+                    throw new NotImplementedException(
+                        "Unknown steam mode. This mode must not be implemented fully yet.");
             }
         }
 
@@ -379,7 +408,10 @@ namespace Mirage.Sockets.FizzySteam
                     var steamIdentity = new SteamNetworkingIdentity();
                     steamIdentity.SetSteamID(steamEndPoint.Address);
 
-                    _steamSocketManager.HoHSteamNetConnection = SteamNetworkingSockets.ConnectP2P(ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
+
+                    _steamSocketManager.HoHSteamNetConnection = steamSockets.ConnectP2P(
+                        ref steamIdentity, 0, 0, Array.Empty<SteamNetworkingConfigValue_t>());
+
 
                     if (_steamSocketManager.SteamConnections.ContainsKey(steamEndPoint))
                     {
@@ -387,9 +419,10 @@ namespace Mirage.Sockets.FizzySteam
                         {
                             _steamSocketManager.LogDebug("Connection already exists, removing the old one.");
                         }
+
                         _steamSocketManager.SteamConnections.Remove(steamEndPoint);
                     }
-                    
+
                     _steamSocketManager.SteamConnections.Add(steamEndPoint, _steamSocketManager.HoHSteamNetConnection);
 
                     _endPoint = endPoint;
@@ -399,10 +432,14 @@ namespace Mirage.Sockets.FizzySteam
                     _endPoint = (SteamSocketFactory.SteamEndPointWrapper)endPoint;
 
                     var address = new SteamNetworkingIPAddr();
-                    address.SetIPv6(((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Address.GetAddressBytes(), (ushort)((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Port);
+                    address.SetIPv6(
+                        ((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Address
+                        .GetAddressBytes(),
+                        (ushort)((IPEndPoint)((SteamSocketFactory.SteamEndPointWrapper)_endPoint).inner).Port);
+
 
                     _steamSocketManager.HoHSteamNetConnection =
-                        SteamNetworkingSockets.ConnectByIPAddress(ref address, 0,
+                        steamSockets.ConnectByIPAddress(ref address, 0,
                             Array.Empty<SteamNetworkingConfigValue_t>());
 
                     _steamSocketManager.SteamConnections.Add(_endPoint, _steamSocketManager.HoHSteamNetConnection);
@@ -421,8 +458,7 @@ namespace Mirage.Sockets.FizzySteam
             switch (_isServer)
             {
                 case true:
-                    SteamNetworkingSockets.CloseListenSocket(_steamSocketManager.Socket);
-
+                    steamSockets.CloseListenSocket(_steamSocketManager.Socket);
                     break;
                 case false:
 
@@ -434,12 +470,16 @@ namespace Mirage.Sockets.FizzySteam
 
                     Send(_endPoint, data, data.Length);
 
-                    SteamNetworkingSockets.FlushMessagesOnConnection(_steamSocketManager.HoHSteamNetConnection);
+                    steamSockets.FlushMessagesOnConnection(
+                        _steamSocketManager.HoHSteamNetConnection);
+
 
                     await Task.Delay(10);
 
-                    SteamNetworkingSockets.CloseConnection(_steamSocketManager.HoHSteamNetConnection,
+
+                    steamSockets.CloseConnection(_steamSocketManager.HoHSteamNetConnection,
                         (int)ESteamNetConnectionEnd.k_ESteamNetConnectionEnd_App_Generic, null, false);
+
                     break;
             }
 
@@ -498,13 +538,18 @@ namespace Mirage.Sockets.FizzySteam
 
                 if (!_steamSocketManager.SteamConnections.TryGetValue(endPoint, out HSteamNetConnection hSConnection))
                 {
-                    _steamSocketManager.LogDebug($"Cannot find endpoint: {endPoint} in dictionary. Was this connection ever accepted?", LogType.Warning);
+                    _steamSocketManager.LogDebug(
+                        $"Cannot find endpoint: {endPoint} in dictionary. Was this connection ever accepted?",
+                        LogType.Warning);
 
                     return;
                 }
 
-                if ((res = SteamNetworkingSockets.SendMessageToConnection(hSConnection, sendBuffer, (uint)length,
-                        Constants.k_nSteamNetworkingSend_Unreliable, out long _)) == EResult.k_EResultOK)
+                EResult sendMessageToConnection = (res = steamSockets.SendMessageToConnection(
+                    hSConnection, sendBuffer, (uint)length, Constants.k_nSteamNetworkingSend_Unreliable, out long _));
+
+
+                if (sendMessageToConnection == EResult.k_EResultOK)
                 {
                     if (_steamOptions.EnableDebug)
                         _steamSocketManager.LogDebug($"Message was sent successfully");
