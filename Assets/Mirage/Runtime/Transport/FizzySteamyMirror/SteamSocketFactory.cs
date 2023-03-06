@@ -1,4 +1,5 @@
 #if !DISABLESTEAMWORKS
+
 #region Statements
 
 using System;
@@ -17,7 +18,9 @@ namespace Mirage.Sockets.FizzySteam
     {
         #region Fields
 
-        [FormerlySerializedAs("_steamOptions")] public SteamOptions SteamOptions = new SteamOptions();
+        [FormerlySerializedAs("_steamOptions")]
+        public SteamOptions SteamOptions = new SteamOptions();
+
         [NonSerialized] public bool SteamInitialized;
 
         public Action<bool> OnSteamInitialized;
@@ -38,14 +41,24 @@ namespace Mirage.Sockets.FizzySteam
         {
             if (SteamInitialized && SteamOptions.InitSteam)
             {
+#if UNITY_SERVER
+                GameServer.Shutdown();
+#else
                 SteamAPI.Shutdown();
+#endif
             }
         }
 
         private void Update()
         {
             if (SteamOptions.ControlCallbackRunning && SteamInitialized)
+            {
+#if UNITY_SERVER
+                GameServer.RunCallbacks();
+#else
                 SteamAPI.RunCallbacks();
+#endif
+            }
         }
 
         #endregion
@@ -58,8 +71,14 @@ namespace Mirage.Sockets.FizzySteam
         /// <returns>Returns true if initialization was successful. False if already initialized or the initialization could not be completed.</returns>
         public bool Init()
         {
-            if(SteamInitialized)
+            if (SteamInitialized)
                 return false;
+
+
+#if UNITY_SERVER
+            SteamInitialized = Steamworks.GameServer.Init(0, SteamOptions.Port, SteamOptions.QueryPort,
+                EServerMode.eServerModeNoAuthentication, SteamOptions.Version);
+#else
 
             if (SteamAPI.RestartAppIfNecessary((AppId_t)SteamOptions.AppID))
             {
@@ -68,6 +87,8 @@ namespace Mirage.Sockets.FizzySteam
             }
 
             SteamInitialized = SteamAPI.Init();
+#endif
+
 
             OnSteamInitialized?.Invoke(SteamInitialized);
 
@@ -85,15 +106,21 @@ namespace Mirage.Sockets.FizzySteam
         /// <summary>
         ///     Check against specific devices to make sure we support it.
         /// </summary>
+#if UNITY_SERVER
+        private bool IsSteam =>
+            Application.platform == RuntimePlatform.LinuxServer ||
+            Application.platform == RuntimePlatform.WindowsServer ||
+            Application.platform == RuntimePlatform.OSXServer;
+#else
         private bool IsSteam => Application.platform == RuntimePlatform.LinuxEditor ||
                                 Application.platform == RuntimePlatform.LinuxPlayer ||
-                                Application.platform == RuntimePlatform.LinuxServer ||
                                 Application.platform == RuntimePlatform.WindowsPlayer ||
                                 Application.platform == RuntimePlatform.WindowsEditor ||
-                                Application.platform == RuntimePlatform.WindowsServer ||
                                 Application.platform == RuntimePlatform.OSXPlayer ||
-                                Application.platform == RuntimePlatform.OSXEditor ||
-                                Application.platform == RuntimePlatform.OSXServer;
+                                Application.platform == RuntimePlatform.OSXEditor;
+#endif
+
+
         /// <summary>
         ///     Make sure device is supported.
         /// </summary>
@@ -188,6 +215,7 @@ namespace Mirage.Sockets.FizzySteam
                 {
                     return inner.Equals(other.inner);
                 }
+
                 return false;
             }
 
