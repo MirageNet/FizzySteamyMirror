@@ -43,6 +43,12 @@ namespace Mirage.Sockets.FizzySteam
 
         [Tooltip("Only used in udp mode.")]
         public ushort Port = 7777;
+
+        [Tooltip("Only used when launched as a dedicated server.")]
+        public ushort QueryPort = 7778;
+
+        [Tooltip("Only used when launched as a dedicated server for the Steam server browser.")]
+        public string Version = "1.0.0.0";
     }
 
     public enum SteamModes : byte
