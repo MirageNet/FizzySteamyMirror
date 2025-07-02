@@ -1,3 +1,5 @@
+## ⚠️⚠️ Warning: This is the new version of the library, previously known as [MirageSteamworks](https://github.com/MirageNet/MirageSteamworks). ⚠️⚠️
+
 [![Documentation](https://img.shields.io/badge/documentation-brightgreen.svg)](https://miragenet.github.io/Mirage/)
 [![Discord](https://img.shields.io/discord/809535064551456888.svg)](https://discordapp.com/invite/DTBPBYvexy)
 [![release](https://img.shields.io/github/release/MirageNet/FizzySteamyMirror.svg)](https://github.com/MirageNet/FizzySteamyMirror/releases/latest)
